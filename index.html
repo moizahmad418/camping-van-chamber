@@ -1,0 +1,1905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Overland Body — LC79 / HJ79 — 3D Model</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  :root{
+    --bg: #14181b;
+    --panel: #1c2226;
+    --panel-line: #313a3f;
+    --ink: #e7e2d3;
+    --ink-dim: #9aa19a;
+    --rust: #c1531c;
+    --sand: #cbb994;
+    --mono: 'SF Mono', 'Consolas', 'Menlo', monospace;
+    --sans: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  }
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; width:100%; height:100%; overflow:hidden; background: var(--bg); color: var(--ink); font-family: var(--sans); }
+  #app{ position: relative; width:100%; height:100%; }
+  canvas{ display:block; touch-action:none; }
+
+  .topbar{
+    position:absolute; top:0; left:0; right:0;
+    display:flex; align-items:flex-start; justify-content:space-between;
+    padding: 14px 20px; z-index: 5;
+    background: linear-gradient(180deg, rgba(20,24,27,0.92), rgba(20,24,27,0));
+    pointer-events:none;
+  }
+  .topbar .brand{ pointer-events:auto; }
+  .brand h1{ margin:0; font-size:16px; letter-spacing:0.14em; text-transform:uppercase; font-weight:700; color: var(--sand); }
+  .brand .sub{ font-family: var(--mono); font-size:11px; color: var(--ink-dim); margin-top:3px; letter-spacing: 0.03em; }
+  .specs{
+    pointer-events:auto; font-family: var(--mono); font-size:11px; color: var(--ink-dim);
+    display:flex; gap:14px; background: rgba(28,34,38,0.75);
+    border: 1px solid var(--panel-line); padding:8px 14px; border-radius:2px; flex-wrap:wrap; max-width:520px;
+  }
+  .specs b{ color: var(--sand); }
+  .topbar-right{
+    pointer-events:auto;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:8px;
+    max-width:620px;
+    margin-top:-1px;
+  }
+  .portfolio-contact{
+    text-align:right;
+    font-family:var(--mono);
+    line-height:1.4;
+    padding:6px 10px 7px;
+    background:rgba(28,34,38,0.72);
+    border:1px solid var(--panel-line);
+    border-radius:2px;
+  }
+  .portfolio-contact .portfolio-name{
+    font-family:var(--sans);
+    color:var(--sand);
+    font-size:14px;
+    font-weight:700;
+    letter-spacing:0.13em;
+    text-transform:uppercase;
+    margin-bottom:3px;
+  }
+  .portfolio-contact a{
+    color:var(--ink-dim);
+    font-size:11.5px;
+    letter-spacing:0.015em;
+    text-decoration:none;
+    margin-left:10px;
+    transition:color .12s ease;
+  }
+  .contact-icon{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:15px;
+    min-width:15px;
+    margin-right:4px;
+    color:var(--sand);
+    font-family:var(--sans);
+    font-size:13px;
+    font-weight:700;
+    vertical-align:-1px;
+  }
+  .user-icon{ font-size:14px; }
+  .linkedin-icon{
+    width:15px;
+    height:15px;
+    border:1px solid var(--sand);
+    border-radius:2px;
+    font-size:9px;
+    letter-spacing:-0.03em;
+    vertical-align:0;
+  }
+  .portfolio-contact a:hover{ color:var(--sand); }
+  .portfolio-contact a + a{
+    border-left:1px solid var(--panel-line);
+    padding-left:10px;
+  }
+
+  .panel{ position:absolute; z-index:5; background: var(--panel); border: 1px solid var(--panel-line); border-radius:2px; }
+  .panel-left{ left:16px; top: 96px; bottom: 16px; width: 232px; padding: 14px; display:flex; flex-direction:column; gap:14px; overflow-y:auto; }
+  .group-title{ font-size:10px; letter-spacing:0.14em; text-transform:uppercase; color: var(--rust); font-weight:700; margin-bottom:8px; border-bottom:1px solid var(--panel-line); padding-bottom:6px; }
+  /* collapsible control tabs — styled to match the main .btn tabs
+     (Exterior / Cutaway + layout / Edit parts), with a dropdown arrow */
+  .acc-head{ display:block; width:100%; text-align:left; background:#232a2e; border:1px solid var(--panel-line);
+    color: var(--ink); font-family: var(--sans); font-size:12.5px; padding:8px 10px; margin-bottom:6px;
+    cursor:pointer; user-select:none; border-radius:2px; transition: all .12s ease; }
+  .acc-head:hover{ border-color: var(--rust); }
+  .acc.open .acc-head{ background: var(--rust); border-color: var(--rust); color:#fff; font-weight:600; }
+  .acc-head .caret{ float:right; color: var(--ink-dim); font-family: var(--mono); font-size:10px; line-height:1.6; transition:transform 0.15s; }
+  .acc.open .acc-head .caret{ transform:rotate(90deg); color: rgba(255,255,255,0.75); }
+  .acc .acc-body{ display:none; padding-top:4px; }
+  .acc.open .acc-body{ display:block; }
+  .btn{ display:block; width:100%; text-align:left; background: #232a2e; border:1px solid var(--panel-line); color: var(--ink); font-family: var(--sans); font-size:12.5px; padding:8px 10px; margin-bottom:6px; cursor:pointer; border-radius:2px; transition: all .12s ease; }
+  .btn:hover{ border-color: var(--rust); }
+  .btn.active{ background: var(--rust); border-color: var(--rust); color:#fff; font-weight:600; }
+  .btn .k{ float:right; color: var(--ink-dim); font-family: var(--mono); font-size:10px; }
+  .btn.active .k{ color: rgba(255,255,255,0.75); }
+  .legend{ font-size:11px; color: var(--ink-dim); line-height:1.7; }
+  .legend .sw{ display:inline-block; width:9px; height:9px; margin-right:7px; border-radius:1px; vertical-align:middle;}
+  .versionrow{ display:flex; gap:6px; }
+  .versionrow .btn{ flex:1; text-align:center; margin-bottom:0; padding:8px 4px; font-size:11px;}
+  .infobox{ font-size:11px; color: var(--ink-dim); line-height:1.55; background:#191f22; border:1px solid var(--panel-line); padding:10px; border-radius:2px; }
+  .infobox b{ color: var(--sand); }
+  .fixlist{ font-size:11px; color:var(--ink-dim); line-height:1.6; background:#191f22; border:1px solid var(--rust); padding:10px; border-radius:2px; }
+  .fixlist b{ color:var(--sand); display:block; margin-bottom:4px;}
+  .panel-hint{ position:absolute; right:16px; bottom:16px; z-index:5; font-family: var(--mono); font-size:10.5px; color: var(--ink-dim); background: rgba(28,34,38,0.75); border:1px solid var(--panel-line); padding:8px 12px; border-radius:2px; pointer-events:none; }
+  .loading{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background: var(--bg); z-index:20; flex-direction:column; gap:10px; }
+  .loading .l1{ font-family: var(--mono); color: var(--sand); font-size:12px; letter-spacing:0.1em;}
+  .loading .bar{ width:180px; height:2px; background:#2a3135; overflow:hidden; }
+  .loading .bar i{ display:block; height:100%; width:40%; background:var(--rust); animation: slide 1s infinite ease-in-out; }
+  @keyframes slide{ 0%{ transform: translateX(-100%);} 100%{ transform: translateX(350%);} }
+  ::-webkit-scrollbar{ width:6px; }
+  ::-webkit-scrollbar-thumb{ background: var(--panel-line); }
+  @media (max-width: 760px){
+    .panel-left{ width: 172px; padding:10px; }
+    .specs{ display:none; }
+    .brand h1{ font-size:12px; }
+    .topbar-right{ max-width:calc(100vw - 210px); }
+    .portfolio-contact{ padding:5px 7px; }
+    .portfolio-contact .portfolio-name{ font-size:11px; }
+    .portfolio-contact a{ display:block; margin:0; font-size:10px; }
+    .portfolio-contact a + a{ border-left:0; padding-left:0; }
+    .btn{ font-size:11px; padding:7px 8px;}
+  }
+
+  .panel-right{
+    right:16px; top:96px; bottom:16px; width:260px; padding:14px;
+    display:none; flex-direction:column; gap:12px; overflow-y:auto;
+  }
+  .panel-right.open{ display:flex; }
+  .editor-select{
+    width:100%; background:#232a2e; border:1px solid var(--panel-line); color:var(--ink);
+    font-family:var(--sans); font-size:12.5px; padding:8px; border-radius:2px; margin-bottom:4px;
+  }
+  .editor-empty{ font-size:11.5px; color:var(--ink-dim); line-height:1.5; }
+  .slider-row{ margin-bottom:10px; }
+  .slider-row label{
+    display:flex; justify-content:space-between; font-size:11px; color:var(--ink-dim);
+    margin-bottom:4px; font-family:var(--mono);
+  }
+  .slider-row label b{ color:var(--sand); font-weight:600; }
+  .slider-controlrow{ display:flex; align-items:stretch; gap:6px; }
+  .slider-controlrow input[type=range]{
+    flex:1; accent-color:var(--rust); height:16px; cursor:pointer;
+  }
+  .stepper{ display:flex; flex-direction:column; gap:2px; width:22px; flex-shrink:0; }
+  .stepper button{
+    flex:1; background:#232a2e; border:1px solid var(--panel-line); color:var(--sand);
+    font-size:9px; line-height:1; padding:0; cursor:pointer; border-radius:2px;
+  }
+  .stepper button:hover{ border-color:var(--rust); background:#2c343a; }
+  .stepper button:active{ background:var(--rust); color:#fff; }
+  .editor-group-title{
+    font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--rust);
+    font-weight:700; margin:10px 0 6px; border-bottom:1px solid var(--panel-line); padding-bottom:4px;
+  }
+  .editor-btnrow{ display:flex; gap:6px; margin-top:4px; }
+  .editor-btnrow .btn{ flex:1; text-align:center; margin-bottom:0; font-size:11px; padding:7px 4px; }
+  @media (max-width: 1100px){
+    .panel-right{ width:220px; }
+  }
+  @media (max-width: 760px){
+    .panel-right{ left:16px; right:16px; width:auto; top:96px; }
+  }
+  #editorPanel{max-height:calc(100vh - 190px);overflow-y:auto;top:118px; max-height:calc(100vh - 190px); overflow-y:auto; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="loading" id="loading"><div class="l1">LOADING MODEL…</div><div class="bar"><i></i></div></div>
+
+  <div class="topbar">
+    <div class="brand">
+      <h1>Overland Body · LC79 / HJ79</h1>
+      <div class="sub">Rebuilt from your top / side / front-rear reference drawings — grid-measured, 1 square = 100mm</div>
+    </div>
+    <div class="topbar-right">
+      <div class="portfolio-contact">
+        <div class="portfolio-name"><span class="contact-icon user-icon" aria-hidden="true">♙</span> Moiz Ahmad</div>
+        <a href="mailto:moizahmad418@gmail.com"><span class="contact-icon" aria-hidden="true">✉</span> moizahmad418@gmail.com</a>
+        <a href="https://www.linkedin.com/in/moizahmad418" target="_blank" rel="noopener noreferrer"><span class="contact-icon linkedin-icon" aria-hidden="true">in</span> LinkedIn /in/moizahmad418</a>
+      </div>
+      <div class="specs">
+        <div>LENGTH <b>3000</b></div><div>WIDTH <b>2200</b></div><div>RAMP <b>700</b></div>
+        <div>ROOF <b>1950</b></div><div>WALL <b>1550</b></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel panel-left">
+    <div>
+      <div class="group-title">Design revision</div>
+      <div class="versionrow">
+        <button class="btn active" data-version="v3">V3</button>
+      </div>
+    </div>
+    <div>
+      <div class="group-title">View</div>
+      <button class="btn active" id="btnExterior">Exterior<span class="k">1</span></button>
+      <button class="btn" id="btnCutaway">Cutaway + layout<span class="k">2</span></button>
+    </div>
+    <div>
+      <div class="group-title">Tools</div>
+      <button class="btn" id="btnEditor">Edit parts<span class="k">E</span></button>
+    </div>
+    <div class="acc" id="grpDoor"><div class="acc-head">Door<span class="caret">&#9656;</span></div><div class="acc-body">
+      
+      <div class="slider-row">
+        <label><span>Outer door</span><b id="doorPctLabel">Closed</b></label>
+        <div class="slider-controlrow">
+          <input type="range" id="doorSlider" min="0" max="100" step="2" value="0">
+          <div class="stepper">
+            <button type="button" id="doorStepUp">▲</button>
+            <button type="button" id="doorStepDown">▼</button>
+          </div>
+        </div>
+      </div>
+      <div class="slider-row">
+        <label><span>Screen door</span><b id="screenPctLabel">Closed</b></label>
+        <div class="slider-controlrow">
+          <input type="range" id="screenSlider" min="0" max="100" step="2" value="0">
+          <div class="stepper">
+            <button type="button" id="screenStepUp">▲</button>
+            <button type="button" id="screenStepDown">▼</button>
+          </div>
+        </div>
+      </div>
+      <div class="editor-btnrow">
+        <button class="btn" id="btnDoorOpen">Open both</button>
+        <button class="btn" id="btnDoorClose">Close both</button>
+      </div>
+    </div></div>
+    <div class="acc" id="grpStorage"><div class="acc-head">Storage bench<span class="caret">&#9656;</span></div><div class="acc-body">
+      
+      <div class="slider-row">
+        <label><span>Left upper</span><b id="storageLUPctLabel">Closed</b></label>
+        <div class="slider-controlrow">
+          <input type="range" id="storageLUSlider" min="0" max="100" step="2" value="0">
+          <div class="stepper">
+            <button type="button" id="storageLUStepUp">▲</button>
+            <button type="button" id="storageLUStepDown">▼</button>
+          </div>
+        </div>
+      </div>
+      <div class="slider-row">
+        <label><span>Left lower</span><b id="storageLLPctLabel">Closed</b></label>
+        <div class="slider-controlrow">
+          <input type="range" id="storageLLSlider" min="0" max="100" step="2" value="0">
+          <div class="stepper">
+            <button type="button" id="storageLLStepUp">▲</button>
+            <button type="button" id="storageLLStepDown">▼</button>
+          </div>
+        </div>
+      </div>
+      <div class="slider-row">
+        <label><span>Right upper</span><b id="storageRUPctLabel">Closed</b></label>
+        <div class="slider-controlrow">
+          <input type="range" id="storageRUSlider" min="0" max="100" step="2" value="0">
+          <div class="stepper">
+            <button type="button" id="storageRUStepUp">▲</button>
+            <button type="button" id="storageRUStepDown">▼</button>
+          </div>
+        </div>
+      </div>
+      <div class="slider-row">
+        <label><span>Right lower</span><b id="storageRLPctLabel">Closed</b></label>
+        <div class="slider-controlrow">
+          <input type="range" id="storageRLSlider" min="0" max="100" step="2" value="0">
+          <div class="stepper">
+            <button type="button" id="storageRLStepUp">▲</button>
+            <button type="button" id="storageRLStepDown">▼</button>
+          </div>
+        </div>
+      </div>
+      <div class="editor-btnrow">
+        <button class="btn" id="btnStorageOpen">Open all</button>
+        <button class="btn" id="btnStorageClose">Close all</button>
+      </div>
+    </div></div>
+    <div class="acc" id="grpShowerDoor"><div class="acc-head">Shower door<span class="caret">&#9656;</span></div><div class="acc-body">
+      
+      <div class="slider-row">
+        <label><span>Shower door</span><b id="showerDoorPctLabel">Closed</b></label>
+        <div class="slider-controlrow">
+          <input type="range" id="showerDoorSlider" min="0" max="100" step="2" value="0">
+          <div class="stepper">
+            <button type="button" id="showerDoorStepUp">▲</button>
+            <button type="button" id="showerDoorStepDown">▼</button>
+          </div>
+        </div>
+      </div>
+    </div></div>
+    <div class="acc" id="grpTanks"><div class="acc-head">Water tanks<span class="caret">&#9656;</span></div><div class="acc-body">
+      
+      <div class="slider-row">
+        <label><span>Side A tank door</span><b id="tankAPctLabel">Closed</b></label>
+        <div class="slider-controlrow">
+          <input type="range" id="tankASlider" min="0" max="100" step="2" value="0">
+          <div class="stepper">
+            <button type="button" id="tankAStepUp">▲</button>
+            <button type="button" id="tankAStepDown">▼</button>
+          </div>
+        </div>
+      </div>
+      <div class="slider-row">
+        <label><span>Side B tank door</span><b id="tankBPctLabel">Closed</b></label>
+        <div class="slider-controlrow">
+          <input type="range" id="tankBSlider" min="0" max="100" step="2" value="0">
+          <div class="stepper">
+            <button type="button" id="tankBStepUp">▲</button>
+            <button type="button" id="tankBStepDown">▼</button>
+          </div>
+        </div>
+      </div>
+      <div class="slider-row">
+        <label><span>Side A drawers</span><b id="tankDrwAPctLabel">Closed</b></label>
+        <div class="slider-controlrow">
+          <input type="range" id="tankDrwASlider" min="0" max="100" step="2" value="0">
+          <div class="stepper">
+            <button type="button" id="tankDrwAStepUp">▲</button>
+            <button type="button" id="tankDrwAStepDown">▼</button>
+          </div>
+        </div>
+      </div>
+      <div class="slider-row">
+        <label><span>Side B drawers</span><b id="tankDrwBPctLabel">Closed</b></label>
+        <div class="slider-controlrow">
+          <input type="range" id="tankDrwBSlider" min="0" max="100" step="2" value="0">
+          <div class="stepper">
+            <button type="button" id="tankDrwBStepUp">▲</button>
+            <button type="button" id="tankDrwBStepDown">▼</button>
+          </div>
+        </div>
+      </div>
+    </div></div>
+    <div>
+      <div class="group-title">Show</div>
+      <button class="btn active" id="btnChassis">LC79 cab &amp; chassis</button>
+      <button class="btn active" id="btnLabels">Layout labels</button>
+      <button class="btn active" id="btnGrid">Ground grid</button>
+      <button class="btn" id="btnSpin">Auto-rotate</button>
+    </div>
+    <div>
+      <div class="group-title">Interior legend</div>
+      <div class="legend">
+        <div><span class="sw" style="background:#8a9c6e"></span>Bunk beds (x2)</div>
+        <div><span class="sw" style="background:#5c8fa3"></span>Shower / toilet</div>
+        <div><span class="sw" style="background:#c99b5f"></span>Storage bench</div>
+        <div><span class="sw" style="background:#3f6fae"></span>Water tank</div>
+        <div><span class="sw" style="background:#6b6b6b"></span>Heavy storage</div>
+        <div><span class="sw" style="background:#c9b894"></span>Folding seat</div>
+        <div><span class="sw" style="background:#555"></span>Spare wheel</div>
+      </div>
+    </div>
+    <div class="fixlist">
+      <b>New: live part editor</b>
+      Press <b>Edit parts</b> (or "E") to select any bunk, tank, window, door, wheel etc. and drag sliders to move it fore/aft, left/right, up/down, resize it on any axis, or turn/tilt/roll it. Switch to Cutaway view first to reach interior items.
+    </div>
+  </div>
+
+  <div class="panel panel-right" id="editorPanel">
+    <div>
+      <div class="group-title">Edit parts</div>
+      <select class="editor-select" id="editorSelect"></select>
+    </div>
+    <div id="editorControls"></div>
+    <div class="editor-btnrow">
+      <button class="btn" id="btnResetOne">Reset this part</button>
+      <button class="btn" id="btnResetAll">Reset all</button>
+    </div>
+    <div class="editor-empty">Drag a slider for big moves, or tap ▲/▼ next to it to nudge one step at a time. Fore/Aft moves it along the camper's length, Left/Right across the width, Up/Down vertically. In Exterior view the walls hide interior items unless you've opened the door — switch to Cutaway (2) for an x-ray view instead.</div>
+  </div>
+
+  <div class="panel-hint">DRAG to orbit · SCROLL to zoom · SHIFT+DRAG to pan</div>
+</div>
+
+<script>
+(function(){
+
+/* ============================================================
+   CONFIG — every figure below was measured directly off the
+   four reference drawings (grid = 100mm/square, confirmed by
+   pixel-measuring the grid lines in each image).
+   X = length, 0 at the rear wall, +X toward the cab.
+   Y = height, 0 at the camper's interior floor.
+   Z = width, 0 to 2200 (Side B = shower/door side, Z=0;
+       Side A = storage/tank/spare-wheel side, Z=2200).
+   ============================================================ */
+const CFG = {
+  length: 3000, width: 2200,
+  ramp: 700,          // rear-bottom chamfer run — "Angle length 700"
+  wallTop: 1550,       // height where roof chamfer begins (not dimensioned — proportioned)
+  roofH: 1950,         // roof height (not dimensioned — proportioned)
+  roofInset: 400,       // roof chamfer run, all 4 edges (not dimensioned — proportioned)
+  floorHeight: 950       // ground clearance under the camper floor (assumed chassis height)
+};
+
+const VERSIONS = {
+  v1: { label:'Earlier pass · reduced fit-out', note:'Same 3000×2200×700 shell. Shown with just the bunks, shower/toilet and door — matches the earliest tab before the water tanks, spare wheel and second window were added.',
+        feats:['bunks','shower','door','hatch'] },
+  v2: { label:'Mid pass · services added', note:'Adds the twin water tanks/heavy-storage bins, storage bench, spare wheel and remaining windows.',
+        feats:['bunks','shower','door','storage','tanks','spare','windowB1','seat','hatch'] },
+  v3: { label:'Current · full fit-out', note:'Everything from your latest drawings: bunks, wet bath, storage bench, twin tanks, spare wheel, folding seat, double door and hatch.',
+        feats:['bunks','shower','door','storage','tanks','spare','windowA','windowB1','seat','hatch'] }
+};
+
+/* ============================================================
+   THREE.JS SETUP
+   ============================================================ */
+const container = document.getElementById('app');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x14181b);
+scene.fog = new THREE.Fog(0x14181b, 12, 30);
+
+const camera = new THREE.PerspectiveCamera(38, window.innerWidth/window.innerHeight, 0.05, 100);
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+container.appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0x8fa6b0, 0x1a1a16, 0.65));
+const sun = new THREE.DirectionalLight(0xfff2df, 1.05);
+sun.position.set(4.5, 7, 3.5); sun.castShadow = true;
+sun.shadow.mapSize.set(2048,2048);
+sun.shadow.camera.left=-6; sun.shadow.camera.right=6; sun.shadow.camera.top=6; sun.shadow.camera.bottom=-6;
+sun.shadow.camera.near=0.5; sun.shadow.camera.far=18;
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0x4f6a86, 0.35);
+fill.position.set(-6,3,-4); scene.add(fill);
+
+/* ---------- orbit-style controls (no external addon) ---------- */
+const target = new THREE.Vector3(CFG.length*0.0011, 1.0, 0);
+let radius = 6.6, theta = Math.PI*0.26, phi = Math.PI*0.4;
+let dragging=false, panning=false, lastX=0, lastY=0;
+function updateCamera(){
+  const sp=Math.sin(phi), cp=Math.cos(phi);
+  camera.position.set(target.x+radius*sp*Math.sin(theta), target.y+radius*cp, target.z+radius*sp*Math.cos(theta));
+  camera.lookAt(target);
+}
+renderer.domElement.addEventListener('pointerdown', e=>{ dragging=true; panning=e.shiftKey; lastX=e.clientX; lastY=e.clientY; renderer.domElement.setPointerCapture(e.pointerId); });
+renderer.domElement.addEventListener('pointerup', ()=>{ dragging=false; });
+renderer.domElement.addEventListener('pointermove', e=>{
+  if(!dragging) return;
+  const dx=e.clientX-lastX, dy=e.clientY-lastY; lastX=e.clientX; lastY=e.clientY;
+  if(panning){
+    const panSpeed=radius*0.0016;
+    const right=new THREE.Vector3(Math.cos(theta),0,-Math.sin(theta));
+    target.addScaledVector(right,-dx*panSpeed); target.addScaledVector(new THREE.Vector3(0,1,0), dy*panSpeed);
+  } else {
+    theta -= dx*0.0055; phi = Math.min(Math.max(phi-dy*0.0045,0.15), Math.PI-0.15);
+  }
+});
+renderer.domElement.addEventListener('wheel', e=>{ e.preventDefault(); radius=Math.min(Math.max(radius+e.deltaY*0.0035*radius,1.8),22); }, {passive:false});
+let pinchDist=null;
+renderer.domElement.addEventListener('touchmove', e=>{
+  if(e.touches.length===2){
+    const dx=e.touches[0].clientX-e.touches[1].clientX, dy=e.touches[0].clientY-e.touches[1].clientY;
+    const d=Math.hypot(dx,dy);
+    if(pinchDist!=null){ radius=Math.min(Math.max(radius-(d-pinchDist)*0.01,1.8),22); }
+    pinchDist=d;
+  }
+}, {passive:true});
+renderer.domElement.addEventListener('touchend', ()=>{ pinchDist=null; });
+let autoRotate=false;
+
+/* ============================================================
+   MATERIALS
+   ============================================================ */
+const matBody = new THREE.MeshStandardMaterial({ color:0xd8d2c0, roughness:0.55, metalness:0.06, side:THREE.DoubleSide });
+const matBodyTrans = new THREE.MeshStandardMaterial({ color:0xd8d2c0, roughness:0.55, metalness:0.06, transparent:true, opacity:0.1, depthWrite:false, side:THREE.DoubleSide });
+// --- corrugation bump map (Citroën H-van style horizontal ribs) ---
+// procedural canvas: one smooth ridge tile, repeated vertically. Wall UVs
+// are in metres, so repeat.y sets rib pitch: 18 ribs/m ≈ 55mm spacing.
+const corrCanvas = document.createElement('canvas');
+corrCanvas.width = 4; corrCanvas.height = 64;
+{
+  const cctx = corrCanvas.getContext('2d');
+  const grd = cctx.createLinearGradient(0,0,0,64);
+  // rounded ridge profile: dark valley -> bright crest -> dark valley
+  grd.addColorStop(0.00,'#404040');
+  grd.addColorStop(0.25,'#c0c0c0');
+  grd.addColorStop(0.50,'#ffffff');
+  grd.addColorStop(0.75,'#c0c0c0');
+  grd.addColorStop(1.00,'#404040');
+  cctx.fillStyle = grd; cctx.fillRect(0,0,4,64);
+}
+const corrTex = new THREE.CanvasTexture(corrCanvas);
+corrTex.wrapS = THREE.RepeatWrapping; corrTex.wrapT = THREE.RepeatWrapping;
+corrTex.repeat.set(1, 11);
+// wall color (the 4 vertical sides below the roof slant) and roof color
+// (the sloped top, plus the flat ceiling strip that sits directly under it)
+const matWallBlue = new THREE.MeshStandardMaterial({ color:0x2f5f9e, roughness:0.5, metalness:0.08, side:THREE.DoubleSide, bumpMap:corrTex, bumpScale:0.006 });
+const matWallBlueTrans = new THREE.MeshStandardMaterial({ color:0x2f5f9e, roughness:0.5, metalness:0.08, transparent:true, opacity:0.1, depthWrite:false, side:THREE.DoubleSide });
+const matRoofWhite = new THREE.MeshStandardMaterial({ color:0xf3f1ea, roughness:0.45, metalness:0.04, side:THREE.DoubleSide });
+const matRoofWhiteTrans = new THREE.MeshStandardMaterial({ color:0xf3f1ea, roughness:0.45, metalness:0.04, transparent:true, opacity:0.1, depthWrite:false, side:THREE.DoubleSide });
+const matFrame = new THREE.MeshStandardMaterial({ color:0xece7da, roughness:0.5, side:THREE.DoubleSide });
+const matGlass = new THREE.MeshStandardMaterial({ color:0x35505f, roughness:0.1, metalness:0.5, transparent:true, opacity:0.82, side:THREE.DoubleSide });
+// genuinely see-through pane for the entry door window
+const matDoorGlass = new THREE.MeshStandardMaterial({ color:0x9fc8dc, roughness:0.05, metalness:0.3, transparent:true, opacity:0.22, side:THREE.DoubleSide });
+const matDoor = new THREE.MeshStandardMaterial({ color:0xe8e5da, roughness:0.4, side:THREE.DoubleSide });
+const matDoorTrim = new THREE.MeshStandardMaterial({ color:0x17171a, roughness:0.5, side:THREE.DoubleSide });
+const matHandle = new THREE.MeshStandardMaterial({ color:0x1e1e20, roughness:0.35, metalness:0.6 });
+function makeMeshScreenTexture(){
+  const c = document.createElement('canvas'); c.width=128; c.height=128;
+  const ctx = c.getContext('2d');
+  ctx.strokeStyle = 'rgba(216,213,203,0.95)';
+  ctx.lineWidth = 5;
+  for(let i=-128;i<256;i+=20){
+    ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i+128,128); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(i,128); ctx.lineTo(i+128,0); ctx.stroke();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(5,10);
+  return tex;
+}
+const matMeshScreen = new THREE.MeshStandardMaterial({ map:makeMeshScreenTexture(), transparent:true, side:THREE.DoubleSide, roughness:0.8, depthWrite:false });
+const matChassis = new THREE.MeshStandardMaterial({ color:0x2b2e30, roughness:0.65, metalness:0.35 });
+function makeTireTreadTexture(){
+  const c = document.createElement('canvas'); c.width=1024; c.height=160;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#1a1a1a'; ctx.fillRect(0,0,1024,160);
+  // circumferential grooves
+  ctx.fillStyle = '#080808';
+  ctx.fillRect(0,8,1024,7);
+  ctx.fillRect(0,70,1024,11);
+  ctx.fillRect(0,145,1024,7);
+  // staggered tread blocks with siping, two rows
+  for(let x=0;x<1024;x+=28){
+    ctx.fillStyle = '#0f0f0f';
+    ctx.fillRect(x,20,20,45);
+    ctx.fillRect(x+14,88,20,50);
+    ctx.strokeStyle='#040404'; ctx.lineWidth=1.4;
+    for(let s=0;s<3;s++){
+      ctx.beginPath(); ctx.moveTo(x+2,25+s*13); ctx.lineTo(x+17,29+s*13); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x+16,92+s*14); ctx.lineTo(x+31,96+s*14); ctx.stroke();
+    }
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.repeat.set(1,1);
+  return tex;
+}
+function makeTireSidewallTexture(){
+  const c = document.createElement('canvas'); c.width=512; c.height=512;
+  const ctx = c.getContext('2d');
+  const cx=256, cy=256;
+  ctx.fillStyle = '#161616'; ctx.fillRect(0,0,512,512);
+  // concentric sidewall rings
+  [246,238,230,150,142].forEach((r,i)=>{
+    ctx.strokeStyle = i<3 ? '#232323' : '#1e1e1e'; ctx.lineWidth = i<3?3:2;
+    ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.stroke();
+  });
+  // subtle raised lettering band (suggests DOT/size text at a distance)
+  ctx.strokeStyle = '#2c2c2c'; ctx.lineWidth = 5;
+  ctx.setLineDash([10,6]);
+  ctx.beginPath(); ctx.arc(cx,cy,196,0.2,2.6); ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx,cy,180,3.4,5.6); ctx.stroke();
+  ctx.setLineDash([]);
+  // fine radial spoke-like texture between rim seat and tread base
+  for(let i=0;i<72;i++){
+    const a = i*Math.PI*2/72;
+    ctx.strokeStyle = i%2===0 ? '#1c1c1c' : '#191919'; ctx.lineWidth=1;
+    ctx.beginPath();
+    ctx.moveTo(cx+Math.cos(a)*160, cy+Math.sin(a)*160);
+    ctx.lineTo(cx+Math.cos(a)*228, cy+Math.sin(a)*228);
+    ctx.stroke();
+  }
+  return new THREE.CanvasTexture(c);
+}
+const matTyreSidewall = new THREE.MeshStandardMaterial({ color:0x141414, roughness:0.9, map: makeTireSidewallTexture() });
+const matTyre = new THREE.MeshStandardMaterial({ color:0x141414, roughness:0.92, map: makeTireTreadTexture() });
+const matTyreFaces = [matTyre, matTyreSidewall, matTyreSidewall];
+const matRim = new THREE.MeshStandardMaterial({ color:0xb7b9bb, roughness:0.35, metalness:0.35 });
+function makeWheelFaceTexture(){
+  const c = document.createElement('canvas'); c.width=512; c.height=512;
+  const ctx = c.getContext('2d');
+  const cx=256, cy=256;
+
+  // outer black lip
+  ctx.fillStyle = '#0b0b0c'; ctx.beginPath(); ctx.arc(cx,cy,250,0,Math.PI*2); ctx.fill();
+
+  // machined aluminium face
+  const faceGrad = ctx.createRadialGradient(cx-45,cy-45,40,cx,cy,222);
+  faceGrad.addColorStop(0,'#eceded'); faceGrad.addColorStop(0.55,'#c8cacc'); faceGrad.addColorStop(1,'#98999b');
+  ctx.fillStyle = faceGrad; ctx.beginPath(); ctx.arc(cx,cy,222,0,Math.PI*2); ctx.fill();
+
+  // 8 black windows behind the spokes
+  const n = 8;
+  for(let i=0;i<n;i++){
+    ctx.save(); ctx.translate(cx,cy); ctx.rotate(i*Math.PI*2/n);
+    ctx.beginPath();
+    ctx.moveTo(-13,-66);
+    ctx.quadraticCurveTo(-40,-140,-30,-208);
+    ctx.lineTo(30,-208);
+    ctx.quadraticCurveTo(40,-140,13,-66);
+    ctx.closePath();
+    ctx.fillStyle = '#101112'; ctx.fill();
+    ctx.restore();
+  }
+  // machined split-spoke arms, offset between the windows
+  for(let i=0;i<n;i++){
+    ctx.save(); ctx.translate(cx,cy); ctx.rotate(i*Math.PI*2/n + Math.PI/n);
+    const spokeGrad = ctx.createLinearGradient(0,-68,0,-206);
+    spokeGrad.addColorStop(0,'#dcdedf'); spokeGrad.addColorStop(1,'#a7a9ab');
+    ctx.beginPath();
+    ctx.moveTo(-9,-70); ctx.lineTo(9,-70); ctx.lineTo(17,-204); ctx.lineTo(-17,-204);
+    ctx.closePath(); ctx.fillStyle = spokeGrad; ctx.fill();
+    ctx.strokeStyle = '#6a6c6e'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.restore();
+  }
+  // outer black bead ring with rivet marks
+  ctx.strokeStyle = '#0b0b0c'; ctx.lineWidth = 30;
+  ctx.beginPath(); ctx.arc(cx,cy,236,0,Math.PI*2); ctx.stroke();
+  for(let i=0;i<24;i++){
+    const a = i*Math.PI*2/24;
+    ctx.beginPath(); ctx.arc(cx+Math.cos(a)*236, cy+Math.sin(a)*236, 4.5,0,Math.PI*2);
+    ctx.fillStyle = '#2c2c2e'; ctx.fill();
+  }
+  // lug nuts
+  for(let i=0;i<8;i++){
+    const a = i*Math.PI*2/8 + Math.PI/8;
+    ctx.beginPath(); ctx.arc(cx+Math.cos(a)*74, cy+Math.sin(a)*74, 11,0,Math.PI*2);
+    ctx.fillStyle = '#191919'; ctx.fill();
+    ctx.beginPath(); ctx.arc(cx+Math.cos(a)*74-3, cy+Math.sin(a)*74-3, 3.5,0,Math.PI*2);
+    ctx.fillStyle = '#454547'; ctx.fill();
+  }
+  // chrome centre cap
+  const capGrad = ctx.createRadialGradient(cx-16,cy-16,8,cx,cy,56);
+  capGrad.addColorStop(0,'#ffffff'); capGrad.addColorStop(0.4,'#e3e5e7'); capGrad.addColorStop(0.8,'#aeb1b4'); capGrad.addColorStop(1,'#84878a');
+  ctx.beginPath(); ctx.arc(cx,cy,56,0,Math.PI*2); ctx.fillStyle = capGrad; ctx.fill();
+  ctx.strokeStyle = '#6c6f72'; ctx.lineWidth = 3; ctx.stroke();
+
+  return new THREE.CanvasTexture(c);
+}
+const matWheelFace = new THREE.MeshStandardMaterial({ map: makeWheelFaceTexture(), roughness:0.4, metalness:0.2, side:THREE.DoubleSide });
+function im(hex,op){ return new THREE.MeshStandardMaterial({ color:hex, roughness:0.75, transparent:!!op, opacity:op||1, side:THREE.DoubleSide }); }
+const matBed=im(0x8a9c6e), matBedFrame=im(0x1d1f22), matShower=im(0xf2f0ea,0.82), matShowerDoor=im(0xdfe6e4,0.6), matStorage=im(0xb5502a),
+      matWater=im(0x3f6fae), matHeavy=im(0x6b6b6b), matSeat=im(0xc9b894), matSpare=im(0x3d3d3d), matStep=im(0x777a6e);
+
+/* ============================================================
+   HULL — pentagon prism (rear ramp + vertical walls) capped
+   with a frustum roof chamfered on all four top edges.
+   ============================================================ */
+/* --- editable hatch opening ------------------------------------------
+   The hole is real geometry cut out of the front wall, so to make it
+   editable the wall is rebuilt from hatchState whenever the "Hatch to
+   cab" editable changes. syncHatchFromEditable() runs each frame. */
+const hatchState = { z:(900+1300)/2000, y:(420+1120)/2000, halfW:0.20, halfH:0.35 }; // default opening 400w x 700h
+let frontWallHolder = null, hullCfgRef = null;
+
+function rebuildFrontWall(hz, hy, halfW, halfH){
+  if(!frontWallHolder || !hullCfgRef) return;
+  const { L, W, WT } = hullCfgRef;
+  // clamp so the hole always stays fully inside the wall
+  halfW = Math.min(Math.max(halfW, 0.03), W/2 - 0.05);
+  halfH = Math.min(Math.max(halfH, 0.03), WT/2 - 0.05);
+  hz = Math.min(Math.max(hz, halfW + 0.03), W  - halfW - 0.03);
+  hy = Math.min(Math.max(hy, halfH + 0.03), WT - halfH - 0.03);
+  hatchState.z = hz; hatchState.y = hy; hatchState.halfW = halfW; hatchState.halfH = halfH;
+
+  frontWallHolder.clear();
+  const shapeFront = new THREE.Shape();
+  shapeFront.moveTo(0,0); shapeFront.lineTo(W,0); shapeFront.lineTo(W,WT); shapeFront.lineTo(0,WT); shapeFront.closePath();
+  const holeFront = new THREE.Path();
+  holeFront.moveTo(hz-halfW,hy-halfH); holeFront.lineTo(hz+halfW,hy-halfH);
+  holeFront.lineTo(hz+halfW,hy+halfH); holeFront.lineTo(hz-halfW,hy+halfH); holeFront.closePath();
+  shapeFront.holes.push(holeFront);
+  const frontGeo = new THREE.ShapeGeometry(shapeFront);
+  frontGeo.rotateY(-Math.PI/2); // shape is drawn in (z,y); rotate into the X=L plane
+  frontGeo.translate(L,0,0);
+  const frontWall = new THREE.Mesh(frontGeo, (state && state.view==='cut') ? matWallBlueTrans : matWallBlue);
+  frontWall.castShadow = true; frontWall.receiveShadow = true;
+  frontWall.userData.hullRole = 'wall';
+  frontWallHolder.add(frontWall);
+  frontWallHolder.add(new THREE.LineSegments(new THREE.EdgesGeometry(frontGeo,25), new THREE.LineBasicMaterial({color:0x2a2f28})));
+}
+
+let lastHatchSig = '';
+function syncHatchFromEditable(){
+  const rec = (typeof getEditable === 'function') ? getEditable('hatch') : null;
+  if(!rec) return;
+  const o = rec.obj;
+  // frame is 0.72 x 0.32 around a 0.70 x 0.30 hole; scale maps through
+  const hz = o.position.z, hy = o.position.y;
+  const halfH = 0.35 * o.scale.y, halfW = 0.20 * o.scale.z;
+  const sig = [hz,hy,halfW,halfH].map(v=>v.toFixed(4)).join(',');
+  if(sig === lastHatchSig) return;
+  lastHatchSig = sig;
+  rebuildFrontWall(hz, hy, halfW, halfH);
+}
+
+function buildHull(cfg){
+  const g = new THREE.Group();
+  const { length:L, width:W, ramp:R, wallTop:WT, roofH:RH, roofInset:RI } = cfg;
+
+  // pentagon profile: ramp + floor + front wall + wall-top + rear wall
+  const pts = [ {x:R,y:0}, {x:L,y:0}, {x:L,y:WT}, {x:0,y:WT}, {x:0,y:R} ];
+
+  // single flat quad, extruded along Z — used for floor/ramp/rear-wall/
+  // ceiling-strip, each built separately (instead of one shared buffer)
+  // so each can carry its own material/role.
+  function lateralQuad(p, p2, mat, role){
+    const lv = [ p.x,p.y,0, p2.x,p2.y,0, p2.x,p2.y,W, p.x,p.y,W ];
+    const lidx = [0,1,2, 0,2,3];
+    // metre-based UVs (u = z, v = height along the profile) so the
+    // corrugation bump map ribs run horizontally at a fixed real pitch
+    const luv = [ 0,p.y, 0,p2.y, W,p2.y, W,p.y ];
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(lv,3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(luv,2));
+    geo.setIndex(lidx);
+    geo.computeVertexNormals();
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.castShadow = true; mesh.receiveShadow = true;
+    mesh.userData.hullRole = role;
+    const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo,25), new THREE.LineBasicMaterial({color:0x2a2f28}));
+    g.add(mesh, edges);
+    return mesh;
+  }
+  lateralQuad(pts[0], pts[1], matBody, 'floor');       // floor
+  // front wall (pts[1]->pts[2]) handled separately below with the hatch hole
+  lateralQuad(pts[2], pts[3], matRoofWhite, 'roof');   // ceiling strip, under the roof slant — grouped with "the top"
+  lateralQuad(pts[3], pts[4], matWallBlue, 'wall');    // rear wall
+  lateralQuad(pts[4], pts[0], matWallBlue, 'wall');    // rear bottom slant (ramp) — blue like the walls
+
+  // --- Side A cap (Z=W), solid ---
+  const shapeA = new THREE.Shape();
+  shapeA.moveTo(pts[0].x,pts[0].y);
+  for(let i=1;i<pts.length;i++) shapeA.lineTo(pts[i].x,pts[i].y);
+  shapeA.closePath();
+  const capAGeo = new THREE.ShapeGeometry(shapeA);
+  capAGeo.translate(0,0,W);
+  const capA = new THREE.Mesh(capAGeo, matWallBlue);
+  capA.castShadow = true; capA.receiveShadow = true;
+  capA.userData.hullRole = 'wall';
+  g.add(capA);
+  g.add(new THREE.LineSegments(new THREE.EdgesGeometry(capAGeo,25), new THREE.LineBasicMaterial({color:0x2a2f28})));
+
+  // --- Side B cap (Z=0), with the doorway cut clean through it ---
+  const shapeB = new THREE.Shape();
+  shapeB.moveTo(pts[0].x,pts[0].y);
+  for(let i=1;i<pts.length;i++) shapeB.lineTo(pts[i].x,pts[i].y);
+  shapeB.closePath();
+  const doorHingeX = (2030+2890)/2000 - 0.78/2;
+  const hole = new THREE.Path();
+  const hx0=doorHingeX+0.02, hx1=doorHingeX+0.78-0.02, hy0=0.05, hy1=1.51;
+  hole.moveTo(hx0,hy0); hole.lineTo(hx1,hy0); hole.lineTo(hx1,hy1); hole.lineTo(hx0,hy1); hole.closePath();
+  shapeB.holes.push(hole);
+  const capBGeo = new THREE.ShapeGeometry(shapeB);
+  const capB = new THREE.Mesh(capBGeo, matWallBlue);
+  capB.castShadow = true; capB.receiveShadow = true;
+  capB.userData.hullRole = 'wall';
+  g.add(capB);
+  g.add(new THREE.LineSegments(new THREE.EdgesGeometry(capBGeo,25), new THREE.LineBasicMaterial({color:0x2a2f28})));
+
+  // --- Front wall (X=L), with the hatch opening cut clean through it.
+  // Built inside a holder group and rebuilt live by rebuildFrontWall()
+  // whenever the "Hatch to cab" editable is moved/resized, so the actual
+  // hole follows the edit — not just the trim frame.
+  frontWallHolder = new THREE.Group();
+  g.add(frontWallHolder);
+  hullCfgRef = { L, W, WT };
+  rebuildFrontWall(hatchState.z, hatchState.y, hatchState.halfW, hatchState.halfH);
+
+  // --- roof frustum: bottom rect (0,0)-(L,W) at y=WT, top rect inset by RI at y=RH ---
+  const v = new Float32Array([
+    // bottom rectangle (4 pts) y=WT
+    0,WT,0,  L,WT,0,  L,WT,W,  0,WT,W,
+    // top rectangle (4 pts) y=RH
+    RI,RH,RI,  L-RI,RH,RI,  L-RI,RH,W-RI,  RI,RH,W-RI
+  ]);
+  const idx = [
+    // 4 side trapezoids (front z=0, back z=W, left x=0, right x=L) - each 2 tris
+    0,1,5, 0,5,4,           // z=0 side
+    1,2,6, 1,6,5,           // x=L side
+    2,3,7, 2,7,6,           // z=W side
+    3,0,4, 3,4,7,           // x=0 side
+    // top rectangle
+    4,5,6, 4,6,7
+  ];
+  const roofGeo = new THREE.BufferGeometry();
+  roofGeo.setAttribute('position', new THREE.BufferAttribute(v,3));
+  roofGeo.setIndex(idx);
+  roofGeo.computeVertexNormals();
+  const roof = new THREE.Mesh(roofGeo, matRoofWhite);
+  roof.castShadow = true; roof.receiveShadow = true;
+  roof.userData.hullRole = 'roof';
+  const roofEdges = new THREE.LineSegments(new THREE.EdgesGeometry(roofGeo,25), new THREE.LineBasicMaterial({color:0x2a2f28}));
+  g.add(roof, roofEdges);
+
+  return g;
+}
+
+/* ============================================================
+   EDITABLE-COMPONENT REGISTRY
+   Any mesh/group registered here gets picked up by the "Edit
+   parts" panel: position (fore/aft, left/right, up/down), size
+   (independent X/Y/Z scale off its own footprint) and rotation.
+   ============================================================ */
+let editables = [];
+function registerEditable(id, label, obj){
+  const rx=obj.rotation.x, ry=obj.rotation.y, rz=obj.rotation.z;
+  obj.rotation.set(0,0,0); // measure size in the object's own local frame, unrotated
+  const b = new THREE.Box3().setFromObject(obj);
+  obj.rotation.set(rx,ry,rz);
+  const baseSize = { x: Math.max(b.max.x-b.min.x, 0.001), y: Math.max(b.max.y-b.min.y,0.001), z: Math.max(b.max.z-b.min.z,0.001) };
+  const rec = {
+    id, label, obj,
+    baseSize,
+    basePos: { x:obj.position.x, y:obj.position.y, z:obj.position.z },
+    baseRot: { x:rx, y:ry, z:rz }
+  };
+  editables.push(rec);
+  return rec;
+}
+function resetEditable(rec){
+  rec.obj.position.set(rec.basePos.x, rec.basePos.y, rec.basePos.z);
+  rec.obj.rotation.set(rec.baseRot.x, rec.baseRot.y, rec.baseRot.z);
+  rec.obj.scale.set(1,1,1);
+}
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+function box(w,h,d, mat, x,y,z){
+  const m = new THREE.Mesh(new THREE.BoxGeometry(Math.max(w,0.001),Math.max(h,0.001),Math.max(d,0.001)), mat);
+  m.position.set(x,y,z); m.castShadow = true; m.receiveShadow = true; return m;
+}
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath(); ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+}
+function makeLabelSprite(text){
+  const c = document.createElement('canvas'); const scale=4;
+  c.width=270*scale; c.height=56*scale;
+  const ctx = c.getContext('2d'); ctx.scale(scale,scale);
+  ctx.fillStyle='rgba(20,24,27,0.85)'; roundRect(ctx,2,2,266,44,4); ctx.fill();
+  ctx.strokeStyle='rgba(203,185,148,0.6)'; ctx.lineWidth=1; roundRect(ctx,2,2,266,44,4); ctx.stroke();
+  ctx.fillStyle='#e7e2d3'; ctx.font='600 18px sans-serif'; ctx.textBaseline='middle';
+  ctx.fillText(text, 12, 25);
+  const tex = new THREE.CanvasTexture(c); tex.minFilter = THREE.LinearFilter;
+  const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map:tex, depthTest:false }));
+  spr.scale.set(0.6,0.125,1); spr.renderOrder=10; spr.userData.isLabel=true;
+  return spr;
+}
+
+/* van-style window: light frame + inset tinted glass, mounted flush on a Z-facing wall */
+function vanWindow(w,h, x,y,z, facing){
+  const g = new THREE.Group();
+  const frame = box(w,h,0.03, matFrame, 0,0,0);
+  const glass = box(w-0.07,h-0.07,0.02, matGlass, 0,0, facing>0?0.012:-0.012);
+  g.add(frame, glass);
+  // horizontal accent line (awning-style window seam), like real camper van windows
+  const seam = box(w-0.1,0.012,0.028, new THREE.MeshStandardMaterial({color:0x9a9484}), 0,-h*0.12,facing>0?0.017:-0.017);
+  g.add(seam);
+  g.position.set(x,y,z);
+  return g;
+}
+
+/* window mounted on an X-facing wall (e.g. the front), width runs along Z */
+function vanWindowFlat(w,h, x,y,z){
+  const g = new THREE.Group();
+  g.add(box(0.03,h,w, matFrame, 0,0,0));
+  g.add(box(0.02,h-0.07,w-0.07, matGlass, 0.014,0,0));
+  g.position.set(x,y,z);
+  return g;
+}
+
+/* RV-style entry door: panel built from four slabs around a REAL window
+   aperture with see-through glass. Window: 600 tall, 100mm margin from
+   top/left/right (door is 780 wide, so the glass ends up 580 wide),
+   white frame trim. Returns a hinge Group pivoted at the door's rear
+   edge — rotate hinge.rotation.y to open. */
+function doorPanel(w,h,hingeX,y,wallZ,facing){
+  const hinge = new THREE.Group();
+  const panel = new THREE.Group();
+  const f = facing>0 ? 1 : -1;
+  const cx = w/2; // panel centre, offset from the hinge at local x=0
+
+  // window aperture: 100mm in from top / left / right, 600mm tall
+  const m = 0.10, winH = 0.60;
+  const winW = w - 2*m;
+  const winTop = h/2 - m, winBot = winTop - winH, winY = (winTop+winBot)/2;
+
+  // door slab in four pieces so the aperture is a genuine hole
+  panel.add(box(w, h/2 + winBot, 0.035, matDoor, cx, (winBot - h/2)/2, 0));       // below window
+  panel.add(box(w, h/2 - winTop, 0.035, matDoor, cx, (h/2 + winTop)/2, 0));       // above window
+  panel.add(box(m, winH, 0.035, matDoor, cx - w/2 + m/2, winY, 0));               // left of window
+  panel.add(box(m, winH, 0.035, matDoor, cx + w/2 - m/2, winY, 0));               // right of window
+
+  // black edge trim, all round
+  panel.add(box(w+0.012,0.02,0.04, matDoorTrim, cx, h/2+0.006, 0));
+  panel.add(box(w+0.012,0.02,0.04, matDoorTrim, cx,-h/2-0.006, 0));
+  panel.add(box(0.02,h,0.04, matDoorTrim, cx-w/2-0.006, 0, 0));
+  panel.add(box(0.02,h,0.04, matDoorTrim, cx+w/2+0.006, 0, 0));
+
+  // white window frame trim around the aperture + see-through glass pane
+  panel.add(box(winW+0.05,0.03,0.042, matFrame, cx, winTop+0.008, 0));
+  panel.add(box(winW+0.05,0.03,0.042, matFrame, cx, winBot-0.008, 0));
+  panel.add(box(0.03,winH+0.04,0.042, matFrame, cx-winW/2-0.008, winY, 0));
+  panel.add(box(0.03,winH+0.04,0.042, matFrame, cx+winW/2+0.008, winY, 0));
+  panel.add(box(winW, winH, 0.006, matDoorGlass, cx, winY, 0));
+
+  // black lock assembly + small lever latch, right side mid-height
+  const lock = new THREE.Mesh(new THREE.CylinderGeometry(0.045,0.045,0.02,20), matHandle);
+  lock.rotation.x = Math.PI/2; lock.position.set(w*0.80,-h*0.10, f*0.03); panel.add(lock);
+  const keyhole = new THREE.Mesh(new THREE.CylinderGeometry(0.008,0.008,0.03,10), new THREE.MeshStandardMaterial({color:0xb5432a}));
+  keyhole.rotation.x = Math.PI/2; keyhole.position.set(w*0.80,-h*0.10, f*0.045); panel.add(keyhole);
+  const latch = box(0.018,0.09,0.02, matHandle, w*0.80,-h*0.20, f*0.03);
+  panel.add(latch);
+
+  hinge.add(panel);
+  hinge.position.set(hingeX,y,wallZ);
+  hinge.userData.doorOpenRad = Math.PI*0.6;
+  return hinge;
+}
+
+/* inner flyscreen door — same hinge line, diamond mesh infill in a light frame */
+function meshDoorPanel(w,h,hingeX,y,wallZ,facing){
+  const hinge = new THREE.Group();
+  const panel = new THREE.Group();
+  const f = facing>0 ? 1 : -1;
+  const cx = w/2;
+  const frameMat = matFrame;
+
+  // frame (top/bottom/sides) — thin, matches the light plastic frame in the reference photo
+  panel.add(box(w,0.05,0.03, frameMat, cx, h/2-0.025, 0));
+  panel.add(box(w,0.05,0.03, frameMat, cx,-h/2+0.025, 0));
+  panel.add(box(0.05,h,0.03, frameMat, cx-w/2+0.025, 0, 0));
+  panel.add(box(0.05,h,0.03, frameMat, cx+w/2-0.025, 0, 0));
+  // horizontal mid rail (matches the two-panel mesh split in the photo)
+  panel.add(box(w-0.08,0.035,0.026, frameMat, cx, 0, 0));
+
+  // diamond mesh infill, upper and lower panels
+  const meshW = w-0.11, meshH = (h-0.16)/2;
+  panel.add(box(meshW,meshH,0.006, matMeshScreen, cx, h/2-0.05-meshH/2, 0));
+  panel.add(box(meshW,meshH,0.006, matMeshScreen, cx,-h/2+0.05+meshH/2, 0));
+
+  // small L-shaped pull handle
+  panel.add(box(0.02,0.11,0.02, matHandle, w*0.86,-h*0.06, f*0.02));
+  panel.add(box(0.06,0.02,0.02, matHandle, w*0.86-0.02,-h*0.06+0.05, f*0.02));
+
+  hinge.add(panel);
+  hinge.position.set(hingeX,y,wallZ);
+  hinge.userData.doorOpenRad = Math.PI*0.52;
+  return hinge;
+}
+
+/* stylised folding camp chair */
+/* leg/tube running between two arbitrary points */
+function tubeBetween(p1, p2, mat, radius){
+  const dir = new THREE.Vector3().subVectors(p2,p1);
+  const len = dir.length();
+  const mid = new THREE.Vector3().addVectors(p1,p2).multiplyScalar(0.5);
+  const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius,radius,len,10), mat);
+  mesh.position.copy(mid);
+  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), dir.clone().normalize());
+  mesh.castShadow = true;
+  return mesh;
+}
+
+/* tripod swivel hunting/camp chair — 3 splayed legs on rubber feet, a
+   silent-swivel pedestal, mesh seat + raked mesh back, one armrest. */
+function foldingChair(x,z, seatY){
+  const g = new THREE.Group();
+  const frameMat = new THREE.MeshStandardMaterial({color:0x3a352d, roughness:0.45, metalness:0.55});
+  const fabricMat = new THREE.MeshStandardMaterial({color:0x5b4a3a, roughness:0.85});
+  const footMat = new THREE.MeshStandardMaterial({color:0x161616, roughness:0.8});
+  const accentMat = new THREE.MeshStandardMaterial({color:0xc9531e, roughness:0.4});
+  const armMat = new THREE.MeshStandardMaterial({color:0x1c1c1c, roughness:0.6});
+
+  const hubY = seatY - 0.16;
+  const legR = 0.36;
+
+  // swivel pedestal (the "silent rotation" hub)
+  const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,0.10,14), frameMat);
+  pedestal.position.set(0,hubY+0.05,0); g.add(pedestal);
+  const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.055,0.025,14), footMat);
+  collar.position.set(0,hubY+0.01,0); g.add(collar);
+  g.add(tubeBetween(new THREE.Vector3(0,hubY+0.1,0), new THREE.Vector3(0,seatY-0.02,0), frameMat, 0.02));
+
+  // 3 splayed legs + rubber feet
+  for(let i=0;i<3;i++){
+    const ang = -Math.PI/2 + i*Math.PI*2/3;
+    const foot = new THREE.Vector3(Math.cos(ang)*legR, 0.02, Math.sin(ang)*legR);
+    const hub = new THREE.Vector3(0, hubY, 0);
+    g.add(tubeBetween(hub, foot, frameMat, 0.017));
+    const pad = new THREE.Mesh(new THREE.ConeGeometry(0.045,0.035,8), footMat);
+    pad.position.set(foot.x, 0.02, foot.z); g.add(pad);
+    const clip = new THREE.Mesh(new THREE.BoxGeometry(0.02,0.03,0.02), accentMat);
+    clip.position.set(foot.x*0.55, hubY*0.5, foot.z*0.55); g.add(clip);
+  }
+
+  // seat
+  g.add(box(0.46,0.03,0.44, fabricMat, 0, seatY, 0));
+  const seatFrameZ = [ -0.205, 0.205 ];
+  seatFrameZ.forEach(dz=> g.add(box(0.46,0.02,0.02, frameMat, 0, seatY+0.015, dz)));
+
+  // raked mesh backrest with a rounded top bar (like the reference chair)
+  const backTilt = -0.22, backH = 0.5, backZ = -0.205;
+  const back = box(0.46,backH,0.025, fabricMat, 0, seatY+backH*0.46, backZ);
+  back.rotation.x = backTilt; g.add(back);
+  [-0.215,0.215].forEach(dx=>{
+    const post = box(0.022,backH*1.06,0.022, frameMat, dx, seatY+backH*0.5, backZ);
+    post.rotation.x = backTilt; g.add(post);
+  });
+  const topBar = box(0.5,0.03,0.03, frameMat, 0, seatY+backH*0.98, backZ - backH*0.98*Math.sin(-backTilt));
+  topBar.rotation.x = backTilt; g.add(topBar);
+
+  // single armrest (right side), rubberised pad on a frame post — matches the ref photo
+  const armY = seatY + 0.20;
+  g.add(box(0.30,0.035,0.075, armMat, 0.235, armY, 0.075));
+  g.add(tubeBetween(new THREE.Vector3(0.235,armY-0.017,0.04), new THREE.Vector3(0.23,seatY+0.02,0.10), frameMat, 0.016));
+  g.add(tubeBetween(new THREE.Vector3(0.235,armY-0.017,0.11), new THREE.Vector3(0.23,seatY+0.02,0.17), frameMat, 0.016));
+  const armClip = new THREE.Mesh(new THREE.BoxGeometry(0.02,0.03,0.02), accentMat);
+  armClip.position.set(0.23, seatY+0.03, 0.14); g.add(armClip);
+
+  g.position.set(x,0,z);
+  return g;
+}
+
+/* ============================================================
+   EXTERIOR DETAILS (windows, door, hatch, spare wheels, step)
+   ============================================================ */
+function buildExteriorDetails(cfg, feats){
+  const g = new THREE.Group();
+  const { width:W, length:L } = cfg;
+
+  if(feats.includes('windowA')){
+    // 800w x 600h; front edge 300mm from front wall (x 1.9–2.7), bottom 900mm
+    // above floor (y 0.9–1.5) — top lands right where the roof slant begins.
+    // NB: W is already in metres here (the old W/1000 was a latent unit bug
+    // that put this window at z≈0.003, i.e. buried in the opposite wall)
+    const w = vanWindow(0.8,0.6, 2.3, 1.2, W+0.001, 1);
+    g.add(w); registerEditable('windowA','Window (side A)', w);
+  }
+  if(feats.includes('windowB1')){
+    const w = vanWindow(0.59,0.39, (1130+1720)/2000, (1060+1450)/2000, -0.001, -1);
+    g.add(w); registerEditable('windowB1','Window (shower, side B)', w);
+  }
+  if(feats.includes('windowB2')){
+    const w = vanWindow(0.59,0.5, (2130+2720)/2000, (860+1360)/2000, -0.001, -1);
+    g.add(w); registerEditable('windowB2','Window (near door, side B)', w);
+  }
+  if(feats.includes('windowFront')){
+    // two stacked panes on the front wall, above the hatch — measured off your
+    // front-view grid image: combined 788mm wide, panes 300mm + 190mm tall
+    const fz = (709+1497)/2000;
+    const wUp = vanWindowFlat(0.788,0.30, L, 1.35, fz);
+    const wLo = vanWindowFlat(0.788,0.19, L, 1.105, fz);
+    g.add(wUp, wLo);
+    registerEditable('windowFrontUpper','Front window (upper)', wUp);
+    registerEditable('windowFrontLower','Front window (lower)', wLo);
+  }
+  let doorHinge = null, screenDoorHinge = null;
+  if(feats.includes('door')){
+    const hingeX = (2030+2890)/2000 - 0.78/2;
+    doorHinge = doorPanel(0.78,1.5, hingeX, 0.78, -0.002, -1);
+    registerEditable('door','Door (outer, solid)', doorHinge);
+    screenDoorHinge = meshDoorPanel(0.78,1.5, hingeX, 0.78, 0.028, -1);
+    registerEditable('screenDoor','Door (inner, mesh screen)', screenDoorHinge);
+  }
+  if(feats.includes('hatch')){
+    // real pass-through opening, now cut straight through the front wall
+    // itself (see buildHull) — this just adds the trim frame around it,
+    // so the opening is genuinely see-through instead of a painted-on hole
+    const hx=L, hz=(900+1300)/2000, hy=(420+1120)/2000;
+    const hatchGroup = new THREE.Group();
+    const frame = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(0.01,0.72,0.42)), new THREE.LineBasicMaterial({color:0x2a2f28}));
+    hatchGroup.add(frame);
+    hatchGroup.position.set(hx-0.002,hy,hz);
+    g.add(hatchGroup);
+    registerEditable('hatch','Hatch to cab', hatchGroup);
+  }
+  if(feats.includes('step')){
+    const s = box(0.19,0.26,0.18, matStep, (2830+3020)/2000, 0.13, 0.09);
+    g.add(s); registerEditable('step','Step', s);
+  }
+  return { group:g, door:doorHinge, screenDoor:screenDoorHinge };
+}
+
+/* ============================================================
+   INTERIOR LAYOUT (cutaway mode)
+   ============================================================ */
+/* a box whose top edge on the -Z side is chamfered to follow the hull's own
+   roof slope, so tall furniture near a side wall can't poke through the roof */
+function slantTopBox(x0,x1, y0,yWall,yTop, z0,z1, mat){
+  const pts = [ {y:y0,z:z0}, {y:y0,z:z1}, {y:yTop,z:z1}, {y:yTop,z:Math.min(z0+(yTop-yWall), z1-0.02)}, {y:yWall,z:z0} ];
+  const lv=[], lidx=[];
+  pts.forEach((p,i)=>{
+    const p2 = pts[(i+1)%pts.length];
+    const base = lv.length/3;
+    lv.push(x0,p.y,p.z, x1,p.y,p.z, x1,p2.y,p2.z, x0,p2.y,p2.z);
+    lidx.push(base,base+1,base+2, base,base+2,base+3);
+  });
+  const latGeo = new THREE.BufferGeometry();
+  latGeo.setAttribute('position', new THREE.Float32BufferAttribute(lv,3));
+  latGeo.setIndex(lidx); latGeo.computeVertexNormals();
+  const group = new THREE.Group();
+  group.add(new THREE.Mesh(latGeo, mat));
+  [x0,x1].forEach(x=>{
+    const shape = new THREE.Shape();
+    shape.moveTo(pts[0].z,pts[0].y);
+    for(let i=1;i<pts.length;i++) shape.lineTo(pts[i].z,pts[i].y);
+    shape.closePath();
+    const capGeo = new THREE.ShapeGeometry(shape);
+    // shape is in (z,y); rotate into the X=const plane
+    capGeo.rotateY(-Math.PI/2);
+    capGeo.translate(x,0,0);
+    group.add(new THREE.Mesh(capGeo, mat));
+  });
+  return group;
+}
+
+function buildInterior(cfg, feats){
+  const g = new THREE.Group();
+
+  if(feats.includes('bunks')){
+    // RV fold-up style per reference photo: black steel frame rails, white
+    // mattresses, integrated safety rail on the upper bunk, hanging ladder,
+    // and diagonal support struts anchored back to the rear wall.
+    const matMattress = new THREE.MeshStandardMaterial({ color:0xf1eee6, roughness:0.85, metalness:0.0 });
+
+    function bunkFrame(railHalfX, mattW){
+      const b = new THREE.Group();
+      // black perimeter frame rails
+      b.add(box(railHalfX*2+0.06,0.06,0.06, matBedFrame, 0,-0.04, 1.06));
+      b.add(box(railHalfX*2+0.06,0.06,0.06, matBedFrame, 0,-0.04,-1.06));
+      b.add(box(0.06,0.06,2.18, matBedFrame,  railHalfX,-0.04, 0));
+      b.add(box(0.06,0.06,2.18, matBedFrame, -railHalfX,-0.04, 0));
+      // white mattress sitting on the frame
+      b.add(box(mattW,0.14,2.06, matMattress, 0,0.05,0));
+      return b;
+    }
+
+    const upper = bunkFrame(0.40, 0.80);
+    upper.position.set(0.45, 1.35, 1.10);
+    // integrated safety rail along the open (walkway) side
+    upper.add(box(0.03,0.03,1.40, matBedFrame, 0.40,0.32,0));
+    [-0.68,0,0.68].forEach(z=> upper.add(box(0.03,0.24,0.03, matBedFrame, 0.40,0.19,z)) );
+    // hanging ladder: two stiles to the floor + four rungs
+    [0.35,0.75].forEach(z=> upper.add(box(0.03,1.32,0.03, matBedFrame, 0.43,-0.70,z)) );
+    [-0.25,-0.55,-0.85,-1.15].forEach(y=> upper.add(box(0.035,0.035,0.40, matBedFrame, 0.43,y,0.55)) );
+    // diagonal support struts back to the rear wall (fold-up tension rods)
+    [1.02,-1.02].forEach(z=>{
+      upper.add(tubeBetween(new THREE.Vector3(0.40,-0.05,z), new THREE.Vector3(-0.44,0.18,z), matBedFrame, 0.012));
+    });
+
+    // lower bunk sits right at ramp height, so its rear edge is pulled forward
+    // to clear the ramp's slope (worst case is at its lowest point, y=0.62)
+    const lower = bunkFrame(0.35, 0.70);
+    lower.position.set(0.50, 0.67, 1.10);
+    [1.02,-1.02].forEach(z=>{
+      lower.add(tubeBetween(new THREE.Vector3(0.35,-0.05,z), new THREE.Vector3(-0.49,0.35,z), matBedFrame, 0.012));
+    });
+
+    g.add(upper, lower);
+    registerEditable('bunkUpper','Upper bunk', upper);
+    registerEditable('bunkLower','Lower bunk', lower);
+    // corner posts supporting the bunks (not independently editable — cosmetic)
+    // kept clear of the rear ramp (which only reaches floor level at x=0.7)
+    // support posts at the front only — the rear of the bed sits against the
+    // solid rear wall itself (Y 0.7-1.55), not free-standing over the ramp void
+    const postsGroup = new THREE.Group();
+    [[0.88,0.05],[0.88,2.15]].forEach(([x,z])=>{
+      postsGroup.add(box(0.05,1.42,0.05, matBedFrame, x, 0.71, z));
+    });
+    g.add(postsGroup);
+    registerEditable('bunkPosts','Bunk support posts', postsGroup);
+    const l1 = makeLabelSprite('Upper bunk'); l1.position.set(0.45,1.62,1.10); g.add(l1);
+    const l2 = makeLabelSprite('Lower bunk'); l2.position.set(0.45,0.95,1.10); g.add(l2);
+  }
+  if(feats.includes('shower')){
+    // slanted top on the wall side so it follows the roof's own chamfer instead
+    // of poking through it — flat vertical box up to wallTop, then a matching
+    // 45° chamfer up to a capped height, same as the hull's own roofline.
+    const cube = slantTopBox(0.9,1.9, 0,1.55,1.80, 0.02,0.90, matShower);
+    g.add(cube);
+    registerEditable('shower','Shower / toilet', cube);
+    const l = makeLabelSprite('Shower / toilet'); l.position.set(1.4,1.98,0.45); g.add(l);
+
+    // --- shower cabin door ---
+    // Defaults per spec: Fore/Aft 908mm, Left/Right 890mm, Turn (yaw) -90°.
+    // At that yaw the 550mm panel lies along the cabin's z=0.90 face (the
+    // walkway side), hinged at the bunk-side corner. The "Shower door"
+    // slider swings it a further -90° so it opens out into the walkway,
+    // exactly like the outer door / drawer controls.
+    const showerDoorHinge = new THREE.Group();
+    const sdPanel = new THREE.Group();
+    sdPanel.add(box(0.03,1.42,0.55, matShowerDoor, 0,0,-0.275));
+    // slim vertical pull handle near the free edge
+    sdPanel.add(box(0.018,0.22,0.018, matHandle, 0.028,0,-0.50));
+    showerDoorHinge.add(sdPanel);
+    showerDoorHinge.position.set(0.908, 0.73, 0.890);
+    showerDoorHinge.rotation.y = -Math.PI/2;          // default Turn (yaw) -90°
+    showerDoorHinge.userData.doorClosedRad = -Math.PI/2; // slider's "Closed" = this yaw
+    showerDoorHinge.userData.doorOpenRad = -Math.PI/2;   // additional swing to "Open"
+    g.add(showerDoorHinge);
+    g.userData.showerDoor = showerDoorHinge;
+    registerEditable('showerDoor','Shower cabin door', showerDoorHinge);
+
+    const matBlack = new THREE.MeshStandardMaterial({ color:0x181818, roughness:0.45, metalness:0.35 });
+    const matBlueTrim = new THREE.MeshStandardMaterial({ color:0x2c5f8a, roughness:0.4 });
+    const matToilet = new THREE.MeshStandardMaterial({ color:0xf5f3ee, roughness:0.25 });
+
+    // --- wall-mounted commode: compact floating pan with a broad oval lid ---
+    const toiletGroup = new THREE.Group();
+    // The narrow rear bracket anchors the unit to the shower wall; the floor stays clear.
+    toiletGroup.add(box(0.34,0.12,0.10, matToilet, 0,0.13,-0.12));
+    toiletGroup.add(box(0.42,0.22,0.38, matToilet, 0,0.18,0.08));
+    const bowl = new THREE.Mesh(new THREE.SphereGeometry(1,24,16), matToilet);
+    bowl.scale.set(0.20,0.055,0.23); bowl.position.set(0,0.315,0.105); toiletGroup.add(bowl);
+    const bowlInset = new THREE.Mesh(new THREE.SphereGeometry(1,24,16), matBlack);
+    bowlInset.scale.set(0.145,0.014,0.165); bowlInset.position.set(0,0.366,0.11); toiletGroup.add(bowlInset);
+    const lid = new THREE.Mesh(new THREE.SphereGeometry(1,24,16), matToilet);
+    lid.scale.set(0.205,0.024,0.235); lid.position.set(0,0.392,0.11); toiletGroup.add(lid);
+    toiletGroup.position.set(1.66,0.20,0.34);
+    g.add(toiletGroup);
+    registerEditable('toilet','Wall-mounted commode', toiletGroup);
+
+    // --- round black rain shower head on an angled wall arm ---
+    const showerHeadGroup = new THREE.Group();
+    const armV = new THREE.Mesh(new THREE.CylinderGeometry(0.014,0.014,0.10,10), matBlack);
+    armV.position.set(0,0.05,0); showerHeadGroup.add(armV);
+    const armOut = new THREE.Mesh(new THREE.CylinderGeometry(0.014,0.014,0.22,10), matBlack);
+    armOut.rotation.z = Math.PI/2; armOut.position.set(0.11,0.10,0); showerHeadGroup.add(armOut);
+    const headDisc = new THREE.Mesh(new THREE.CylinderGeometry(0.085,0.085,0.02,24), matBlack);
+    headDisc.rotation.x = Math.PI*0.12; headDisc.position.set(0.225,0.085,0); showerHeadGroup.add(headDisc);
+    showerHeadGroup.position.set(1.15,1.42,0.08);
+    // Mount to the rear shower wall and project into the shower, not through the wall.
+    showerHeadGroup.rotation.y = -Math.PI/2;
+    g.add(showerHeadGroup);
+    registerEditable('showerHead','Shower head', showerHeadGroup);
+
+    // --- thermostatic mixer valve, mid-height on the wall ---
+    const mixerGroup = new THREE.Group();
+    mixerGroup.add(box(0.03,0.16,0.09, matBlack, 0,0,0));
+    const knob1 = new THREE.Mesh(new THREE.CylinderGeometry(0.018,0.018,0.02,12), matBlack);
+    knob1.rotation.z = Math.PI/2; knob1.position.set(0.02,0.045,0); mixerGroup.add(knob1);
+    const knob2 = new THREE.Mesh(new THREE.CylinderGeometry(0.018,0.018,0.02,12), matBlack);
+    knob2.rotation.z = Math.PI/2; knob2.position.set(0.02,-0.045,0); mixerGroup.add(knob2);
+    mixerGroup.position.set(1.15,0.88,0.06);
+    g.add(mixerGroup);
+    registerEditable('showerMixer','Shower mixer valve', mixerGroup);
+
+    // hose from the correctly oriented shower head down to the wall mixer
+    g.add(tubeBetween(new THREE.Vector3(1.15,1.50,0.31), new THREE.Vector3(1.15,1.10,0.22), matBlack, 0.010));
+    g.add(tubeBetween(new THREE.Vector3(1.15,1.10,0.22), new THREE.Vector3(1.15,0.90,0.075), matBlack, 0.010));
+
+    // --- hanging wire caddy with a couple of bottles ---
+    const caddyGroup = new THREE.Group();
+    const basketMat = new THREE.MeshStandardMaterial({ color:0x1c1c1c, roughness:0.5, metalness:0.4 });
+    [[-0.09,-0.05],[0.09,-0.05],[-0.09,0.05],[0.09,0.05]].forEach(([x,z])=>{
+      caddyGroup.add(box(0.012,0.09,0.012, basketMat, x,-0.045,z));
+    });
+    caddyGroup.add(box(0.20,0.012,0.12, basketMat, 0,0,0));
+    caddyGroup.add(box(0.20,0.012,0.012, basketMat, 0,-0.09,0.054));
+    const bottle1 = new THREE.Mesh(new THREE.CylinderGeometry(0.028,0.028,0.13,12), new THREE.MeshStandardMaterial({color:0xd8452c,roughness:0.4}));
+    bottle1.position.set(-0.06,0.075,0); caddyGroup.add(bottle1);
+    const bottle2 = new THREE.Mesh(new THREE.CylinderGeometry(0.026,0.026,0.11,12), new THREE.MeshStandardMaterial({color:0xe8e4d8,roughness:0.4}));
+    bottle2.position.set(0.05,0.065,0); caddyGroup.add(bottle2);
+    caddyGroup.position.set(1.15,1.05,0.10);
+    g.add(caddyGroup);
+    registerEditable('showerCaddy','Shower caddy', caddyGroup);
+
+    // shower drain tray — recentred so it sits fully INSIDE the cabin
+    // (x 0.9–1.9): the old x-centre of 1.15 with a 620mm tray spanned
+    // x 0.84–1.46, poking 60mm out of the cabin's bunk-side face
+    const trayGroup = new THREE.Group();
+    const matTray = new THREE.MeshStandardMaterial({color:0xe8e6df,roughness:0.4});
+    trayGroup.add(box(0.62,0.02,0.55, matTray, 0,0,0));
+    // raised lip around the tray rim
+    trayGroup.add(box(0.62,0.05,0.02, matTray, 0,0.015, 0.265));
+    trayGroup.add(box(0.62,0.05,0.02, matTray, 0,0.015,-0.265));
+    trayGroup.add(box(0.02,0.05,0.55, matTray,  0.30,0.015,0));
+    trayGroup.add(box(0.02,0.05,0.55, matTray, -0.30,0.015,0));
+    trayGroup.position.set(1.40,0.01,0.45);
+    g.add(trayGroup);
+    registerEditable('showerTray','Shower tray', trayGroup);
+  }
+  if(feats.includes('storage')){
+    // Pale plywood storage bench with two recessed, front-opening chamber doors.
+    const matBenchWood = new THREE.MeshStandardMaterial({color:0xc99b5f, roughness:0.58});
+    const matBenchTop = new THREE.MeshStandardMaterial({color:0xf1eee6, roughness:0.42});
+    const matBenchInside = new THREE.MeshStandardMaterial({color:0x4a351f, roughness:0.82});
+    const matBenchHandle = new THREE.MeshStandardMaterial({color:0x121212, roughness:0.35, metalness:0.4});
+    const bench = new THREE.Group();
+    // Open-front carcass: side panels, base, rear, and a lightly overhanging top.
+    bench.add(box(0.07,0.84,0.58, matBenchWood, -0.815,0.42,0));
+    bench.add(box(0.07,0.84,0.58, matBenchWood, 0.815,0.42,0));
+    bench.add(box(1.70,0.07,0.58, matBenchWood, 0,0.035,0));
+    bench.add(box(1.70,0.84,0.07, matBenchWood, 0,0.42,0.255));
+    // top's left edge pulled in from 0.86 to 0.925 (world x) so it clears
+    // the bunk bed's front support post at x=0.88 instead of z-fighting
+    // through it — right-side overhang (the open, room-facing edge) is
+    // untouched
+    // Countertop flush with the carcass on the back (toward the outer
+    // wall) and right side, and essentially flush on the left too (10mm
+    // short of full-flush only to keep clearing the bunk post) — overhang
+    // kept only on the front/open room-facing edge, as before. The old
+    // version overhung 20mm past the actual hull side wall on the back
+    // edge, which is what was visibly poking through the exterior.
+    // Fore/Aft 0mm (centered), Length(X) 1698mm as requested — note this
+    // leaves only ~6mm clearance from the bunk post (still clear, just tight)
+    const benchTop = box(1.698,0.06,0.62, matBenchTop, 0,0.87,-0.02);
+    bench.add(benchTop);
+    bench.add(box(1.55,0.68,0.42, matBenchInside, 0,0.42,0.01));
+
+    // Each drawer is a sliding Group: a front face + a recessed carcass
+    // box behind it. "closedZ" is its resting position; opening it
+    // translates it toward -Z, which is the open room side of the bench
+    // (the same side the old doors were meant to swing into) — i.e. the
+    // drawer pulls straight out into the camper's interior, not into the
+    // cabinet's own carcass.
+    function storageDrawer(width, height, cx, cz){
+      const slide = new THREE.Group();
+      slide.add(box(width,height,0.030, matBenchInside, 0,0,0));
+      slide.add(box(width-0.05,height-0.05,0.035, matBenchWood, 0,0,-0.025));
+      const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.016,0.016,width*0.42,12), matBenchHandle);
+      handle.rotation.z = Math.PI/2;
+      handle.position.set(0,0,-0.055);
+      slide.add(handle);
+      // drawer carcass — sits behind the front face, extends back (+Z,
+      // into the cabinet) when closed, and is revealed as it slides out
+      const d = 0.36, sm = matBenchInside;
+      slide.add(box(width-0.05,0.02,d, sm, 0,-height/2+0.012, d/2+0.02));
+      slide.add(box(width-0.05,height-0.05,0.02, sm, 0,0, d+0.01));
+      slide.add(box(0.02,height-0.05,d, sm, -width/2+0.012,0, d/2+0.02));
+      slide.add(box(0.02,height-0.05,d, sm, width/2-0.012,0, d/2+0.02));
+      slide.position.set(cx,0,cz);
+      slide.userData.closedZ = cz;
+      slide.userData.slideOpenDist = 0.34;
+      return slide;
+    }
+    const drawerW = 0.74, drawerH = 0.34, closedZ = -0.305;
+    const leftLower  = storageDrawer(drawerW, drawerH, -0.40, closedZ); leftLower.position.y  = 0.24; bench.add(leftLower);
+    const leftUpper  = storageDrawer(drawerW, drawerH, -0.40, closedZ); leftUpper.position.y  = 0.62; bench.add(leftUpper);
+    const rightLower = storageDrawer(drawerW, drawerH,  0.40, closedZ); rightLower.position.y = 0.24; bench.add(rightLower);
+    const rightUpper = storageDrawer(drawerW, drawerH,  0.40, closedZ); rightUpper.position.y = 0.62; bench.add(rightUpper);
+    bench.position.set(1.76,0,1.89);
+    // Individually controllable drawers. Named from the viewpoint of someone
+    // standing in the room FACING the bench: their left is world +x, so the
+    // +0.40 stack is "left" and the -0.40 stack is "right" (this also fixes
+    // the swapped left/right behaviour of the old paired controls).
+    bench.userData.drawerLU = rightUpper;  // +x upper
+    bench.userData.drawerLL = rightLower;  // +x lower
+    bench.userData.drawerRU = leftUpper;   // -x upper
+    bench.userData.drawerRL = leftLower;   // -x lower
+    g.userData.drawerLU = bench.userData.drawerLU;
+    g.userData.drawerLL = bench.userData.drawerLL;
+    g.userData.drawerRU = bench.userData.drawerRU;
+    g.userData.drawerRL = bench.userData.drawerRL;
+    g.add(bench);
+    registerEditable('storageBench','Storage bench', bench);
+    registerEditable('storageBenchTop','Storage bench — top', benchTop);
+    registerEditable('storageDrawerLeftLower','Storage bench — left lower drawer', bench.userData.drawerLL);
+    registerEditable('storageDrawerLeftUpper','Storage bench — left upper drawer', bench.userData.drawerLU);
+    registerEditable('storageDrawerRightLower','Storage bench — right lower drawer', bench.userData.drawerRL);
+    registerEditable('storageDrawerRightUpper','Storage bench — right upper drawer', bench.userData.drawerRU);
+    const l = makeLabelSprite('Storage bench'); l.position.set(1.76,1.02,1.9); g.add(l);
+  }
+  if(feats.includes('tanks')){
+    const matCab = new THREE.MeshStandardMaterial({color:0x3f6fae, roughness:0.6});
+    const matCabIn = new THREE.MeshStandardMaterial({color:0x27466e, roughness:0.8});
+    const matPoly = new THREE.MeshStandardMaterial({color:0xf4f2ec, roughness:0.35});
+    const matCap = new THREE.MeshStandardMaterial({color:0xc93a2a, roughness:0.4});
+    const matDrw = new THREE.MeshStandardMaterial({color:0x6b6b6b, roughness:0.7});
+    const matDrwFace = new THREE.MeshStandardMaterial({color:0x7d7d7d, roughness:0.55});
+    const matDrwIn = new THREE.MeshStandardMaterial({color:0x4c4c4c, roughness:0.8});
+    const matDrwHandle = new THREE.MeshStandardMaterial({color:0x1a1a1a, roughness:0.35, metalness:0.4});
+
+    // Water tank cabinet. face='x': opening on the -x (room) side — used
+    // for tank B, which fronts open floor. face='z': opening on the -z
+    // (central corridor) side — used for tank A, whose -x side is blocked
+    // by the storage bench (per markup arrows).
+    function tankCabinet(cz, face){
+      const c = new THREE.Group();
+      c.add(box(0.36,0.02,0.58, matCab, 0,0.31,0));        // top
+      c.add(box(0.36,0.02,0.58, matCab, 0,0.01,0));        // bottom
+      const doorHinge = new THREE.Group();
+      if(face==='x'){
+        c.add(box(0.02,0.32,0.58, matCabIn, 0.17,0.16,0)); // back
+        c.add(box(0.36,0.32,0.02, matCab, 0,0.16, 0.28));  // sides
+        c.add(box(0.36,0.32,0.02, matCab, 0,0.16,-0.28));
+        // door on the -x face, hinged at the outer z edge, swings out (-x)
+        doorHinge.add(box(0.02,0.30,0.56, matCab, 0,0,-0.28));
+        doorHinge.add(box(0.014,0.10,0.014, matDrwHandle, -0.02,0,-0.50));
+        doorHinge.position.set(-0.18,0.16, 0.28);
+        doorHinge.userData.doorOpenRad = Math.PI*0.55;
+      } else {
+        c.add(box(0.36,0.32,0.02, matCabIn, 0,0.16, 0.28)); // back (far z side)
+        c.add(box(0.02,0.32,0.58, matCab, -0.17,0.16,0));   // sides (x faces closed)
+        c.add(box(0.02,0.32,0.58, matCab,  0.17,0.16,0));
+        // door on the -z face, hinged at the front-wall-side x edge,
+        // swings out into the corridor (-z)
+        doorHinge.add(box(0.34,0.30,0.02, matCab, -0.17,0,0));
+        doorHinge.add(box(0.014,0.10,0.014, matDrwHandle, -0.31,0,-0.02));
+        doorHinge.position.set(0.17,0.16,-0.28);
+        doorHinge.userData.doorOpenRad = -Math.PI*0.55;
+      }
+      // white poly tank inside, moulded top step + red filler cap
+      c.add(box(0.28,0.22,0.50, matPoly, 0.01,0.13,0));
+      c.add(box(0.24,0.04,0.44, matPoly, 0.01,0.26,0));
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.045,0.045,0.025,18), matCap);
+      cap.position.set(-0.04,0.29,-0.10); c.add(cap);
+      c.add(doorHinge);
+      c.userData.door = doorHinge;
+      c.position.set(2.8,0,cz);
+      return c;
+    }
+
+    // Heavy-storage unit above each tank: 3 sliding drawers. face='x':
+    // fronts on -x, sliding out toward -x (tank B). face='z': fronts on
+    // -z, sliding out into the corridor (tank A, per markup arrows).
+    function drawerStack(cz, face){
+      const s = new THREE.Group();
+      s.userData.drawers = [];
+      if(face==='x'){
+        s.add(box(0.02,0.30,0.58, matDrw, 0.17,0.15,0));   // back
+        s.add(box(0.36,0.02,0.58, matDrw, 0,0.29,0));      // top
+        s.add(box(0.36,0.02,0.58, matDrw, 0,0.01,0));      // bottom
+        s.add(box(0.36,0.30,0.02, matDrw, 0,0.15, 0.28));  // sides
+        s.add(box(0.36,0.30,0.02, matDrw, 0,0.15,-0.28));
+        [0.055,0.15,0.245].forEach(y=>{
+          const d = new THREE.Group();
+          d.add(box(0.02,0.082,0.54, matDrwFace, 0,0,0));           // front
+          d.add(box(0.30,0.02,0.50, matDrwIn, 0.16,-0.03,0));       // tray bottom
+          d.add(box(0.30,0.06,0.02, matDrwIn, 0.16,-0.005, 0.24));  // tray sides
+          d.add(box(0.30,0.06,0.02, matDrwIn, 0.16,-0.005,-0.24));
+          const h = new THREE.Mesh(new THREE.CylinderGeometry(0.008,0.008,0.16,10), matDrwHandle);
+          h.rotation.x = Math.PI/2; h.position.set(-0.015,0,0); d.add(h);
+          d.position.set(-0.185,y,0);
+          d.userData.closedPos = {x:-0.185,y:y,z:0};
+          d.userData.openOffset = {x:-0.22,y:0,z:0};
+          s.add(d); s.userData.drawers.push(d);
+        });
+      } else {
+        s.add(box(0.36,0.30,0.02, matDrw, 0,0.15,0.28));   // back
+        s.add(box(0.36,0.02,0.58, matDrw, 0,0.29,0));      // top
+        s.add(box(0.36,0.02,0.58, matDrw, 0,0.01,0));      // bottom
+        s.add(box(0.02,0.30,0.58, matDrw, -0.17,0.15,0));  // sides
+        s.add(box(0.02,0.30,0.58, matDrw,  0.17,0.15,0));
+        [0.055,0.15,0.245].forEach(y=>{
+          const d = new THREE.Group();
+          d.add(box(0.34,0.082,0.02, matDrwFace, 0,0,0));           // front
+          d.add(box(0.30,0.02,0.30, matDrwIn, 0,-0.03,0.16));       // tray bottom
+          d.add(box(0.02,0.06,0.30, matDrwIn,  0.14,-0.005,0.16));  // tray sides
+          d.add(box(0.02,0.06,0.30, matDrwIn, -0.14,-0.005,0.16));
+          const h = new THREE.Mesh(new THREE.CylinderGeometry(0.008,0.008,0.16,10), matDrwHandle);
+          h.rotation.z = Math.PI/2; h.position.set(0,0,-0.015); d.add(h);
+          // closed at z=-0.285 so the front sits flush at the carcass
+          // opening (-0.29); the earlier -0.185 was copied from the
+          // x-face stack, whose carcass is only 0.36 deep, leaving these
+          // fronts recessed 95mm inside the cabinet
+          d.position.set(0,y,-0.285);
+          d.userData.closedPos = {x:0,y:y,z:-0.285};
+          d.userData.openOffset = {x:0,y:0,z:-0.22};
+          s.add(d); s.userData.drawers.push(d);
+        });
+      }
+      s.position.set(2.8,0.32,cz);
+      return s;
+    }
+
+    const waterA = tankCabinet(1.89,'z');
+    const heavyA = drawerStack(1.89,'z');
+    const waterB = tankCabinet(0.31,'x');
+    const heavyB = drawerStack(0.31,'x');
+    g.add(waterA, heavyA, waterB, heavyB);
+    g.userData.tankDoorA = waterA.userData.door;
+    g.userData.tankDoorB = waterB.userData.door;
+    g.userData.tankDrawersA = heavyA.userData.drawers;
+    g.userData.tankDrawersB = heavyB.userData.drawers;
+    registerEditable('waterTankA','Water tank (side A)', waterA);
+    registerEditable('tankDoorA','Water tank door (side A)', waterA.userData.door);
+    registerEditable('heavyStorageA','Storage drawers (side A)', heavyA);
+    registerEditable('waterTankB','Water tank (side B)', waterB);
+    registerEditable('tankDoorB','Water tank door (side B)', waterB.userData.door);
+    registerEditable('heavyStorageB','Storage drawers (side B)', heavyB);
+    const l = makeLabelSprite('Water tank + storage'); l.position.set(2.8,0.85,1.9); g.add(l);
+  }
+  if(feats.includes('seat')){
+    // default Fore/Aft 2450mm per spec
+    const chair = foldingChair(2.45,1.10,0.42);
+    chair.rotation.y = Math.PI/2;
+    g.add(chair);
+    registerEditable('seat','Folding seat', chair);
+    const l = makeLabelSprite('Folding seat'); l.position.set(2.45,0.95,1.10); g.add(l);
+  }
+  if(feats.includes('spare')){
+    // exactly match the axle wheel dimensions (wheelR/wheelW from buildChassis)
+    // so all six wheels are visually identical in size
+    const spareR = 0.40, spareW = 0.27, spareRimR = spareR*0.64;
+    const halfT = spareW/2;
+    [ [(460)/1000,'A'], [1.74,'B'] ].forEach(([z,tag])=>{
+      const wheelGroup = new THREE.Group();
+      // hangs INSIDE the chamber, off the front wall — visible to someone
+      // standing in the doorway looking toward the front, not from outside.
+      // Standoff increased so the wheel's inner face clears the wall by a
+      // safe margin (the old 8mm gap caused visible z-fighting), and the
+      // bracket length is capped to `Math.abs(cx)` so it terminates flush
+      // at the wall instead of poking ~10mm through to the exterior.
+      const cx = -(halfT + 0.09);
+      const bracket = new THREE.Mesh(new THREE.CylinderGeometry(0.035,0.035,Math.abs(cx),10), matRim);
+      bracket.rotation.z = Math.PI/2; bracket.position.set(cx/2, 0, 0);
+      wheelGroup.add(bracket);
+      const spare = new THREE.Mesh(new THREE.CylinderGeometry(spareR,spareR,spareW,28), matTyreFaces);
+      spare.rotation.z = Math.PI/2; spare.position.set(cx, 0, 0);
+      wheelGroup.add(spare);
+      const rimW = spareW+0.02;
+      const rim = new THREE.Mesh(new THREE.CylinderGeometry(spareRimR,spareRimR,rimW,20), matRim);
+      rim.rotation.z = Math.PI/2; rim.position.set(cx, 0, 0);
+      wheelGroup.add(rim);
+      const face = new THREE.Mesh(new THREE.CircleGeometry(spareRimR,32), matWheelFace);
+      face.rotation.y = -Math.PI/2; face.position.set(cx-(rimW/2+0.012), 0, 0);
+      wheelGroup.add(face);
+      const faceBack = new THREE.Mesh(new THREE.CircleGeometry(spareRimR,32), matWheelFace);
+      faceBack.rotation.y = Math.PI/2; faceBack.position.set(cx+(rimW/2+0.012), 0, 0);
+      wheelGroup.add(faceBack);
+      wheelGroup.position.set(cfg.length, 1.05, z);
+      g.add(wheelGroup);
+      registerEditable('spare'+tag, 'Spare wheel ('+(tag==='A'?'left':'right')+')', wheelGroup);
+    });
+    const l = makeLabelSprite('Spare wheel'); l.position.set(cfg.length-0.3,1.65,0.46); g.add(l);
+  }
+  return g;
+}
+
+/* ============================================================
+   CHASSIS (context only — no cab. The real LC79 cab/front body mounts
+   just beyond the front wall; that space is intentionally left empty.)
+   ============================================================ */
+function buildChassis(cfg){
+  const g = new THREE.Group();
+  const { length:L, floorHeight, width:W } = cfg;
+  const track=1.5, wheelR=0.40, wheelW=0.27;
+  // Single-axle trailer layout per markup: chassis rails and the 4-wheel
+  // twin-axle arrangement removed. One axle, centreline at x=2.05 (the
+  // spot indicated by the arrow, just behind the old front axle), running
+  // perpendicular to the trailer's length with one wheel each side at
+  // equal distance (track/2 = 750mm) from the trailer centreline (world z=0).
+  const axleX = 2.05;
+
+  function wheel(x, side){
+    const wg = new THREE.Group();
+    const tyre = new THREE.Mesh(new THREE.CylinderGeometry(wheelR,wheelR,wheelW,28), matTyreFaces);
+    tyre.rotation.x = Math.PI/2; tyre.castShadow = true; wg.add(tyre);
+    const rimR = wheelR*0.64, rimW = wheelW+0.02;
+    const rim = new THREE.Mesh(new THREE.CylinderGeometry(rimR,rimR,rimW,20), matRim);
+    rim.rotation.x = Math.PI/2; wg.add(rim);
+    // textured face on BOTH sides — the inward-facing side is visible too,
+    // from cutaway/interior views, and needs the same detail
+    [-1,1].forEach(s=>{
+      const face = new THREE.Mesh(new THREE.CircleGeometry(rimR,32), matWheelFace);
+      face.position.set(0,0, s*(rimW/2+0.012));
+      wg.add(face);
+    });
+    wg.position.set(x, wheelR, side*track/2);
+    return wg;
+  }
+  // axle tube spanning between the wheels, at hub height
+  const axle = new THREE.Mesh(new THREE.CylinderGeometry(0.045,0.045,track-wheelW,16), matChassis);
+  axle.rotation.x = Math.PI/2;
+  axle.position.set(axleX, wheelR, 0);
+  axle.castShadow = true;
+  g.add(axle);
+  registerEditable('axle','Axle', axle);
+
+  // facing forward (+x, the tow end): left = +z, right = -z
+  const wl = wheel(axleX, 1), wr = wheel(axleX, -1);
+  g.add(wl, wr);
+  registerEditable('tireLeft','Tire (left)', wl);
+  registerEditable('tireRight','Tire (right)', wr);
+  return g;
+}
+
+function buildGround(cfg){
+  const g = new THREE.Group();
+  const size = 16;
+  const grid = new THREE.GridHelper(size, size/0.5, 0x384049, 0x262c30);
+  grid.position.set(cfg.length/1000*0.32, 0, 0);
+  g.add(grid);
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(size*0.7,48), new THREE.MeshStandardMaterial({color:0x14181b, roughness:1}));
+  floor.rotation.x=-Math.PI/2; floor.position.set(cfg.length/1000*0.32,-0.01,0); floor.receiveShadow=true;
+  g.add(floor);
+  return g;
+}
+
+/* ============================================================
+   ASSEMBLE
+   ============================================================ */
+const root = new THREE.Group();
+scene.add(root);
+
+// camperOrigin: local coords are raw metres matching X 0..3, Y 0..~2, Z 0..2.2
+const camperOrigin = new THREE.Group();
+camperOrigin.position.set(0, CFG.floorHeight/1000, -CFG.width/2000);
+root.add(camperOrigin);
+
+let hullGroup, extDetails, interiorGroup, chassisGroup, groundGroup, doorHinge, screenDoorHinge,
+    drawerLU, drawerLL, drawerRU, drawerRL, showerDoorRef, tankDoorA, tankDoorB, tankDrawersA, tankDrawersB;
+const cfgM = { length:CFG.length, width:CFG.width, ramp:CFG.ramp/1000*1000, wallTop:CFG.wallTop, roofH:CFG.roofH, roofInset:CFG.roofInset, floorHeight:CFG.floorHeight };
+// convert mm config to metre-scale config used by builders (builders above already expect metres for chassis;
+// hull/interior functions use raw values assuming metres, so build a metre-scaled cfg)
+const cfgHull = { length:CFG.length/1000, width:CFG.width/1000, ramp:CFG.ramp/1000, wallTop:CFG.wallTop/1000, roofH:CFG.roofH/1000, roofInset:CFG.roofInset/1000 };
+
+function rebuild(versionKey){
+  root.clear();
+  camperOrigin.children.length = 0;
+  root.add(camperOrigin);
+  editables = [];
+  lastHatchSig = ''; // force hatch/wall re-sync after rebuild
+  const feats = VERSIONS[versionKey].feats;
+
+  hullGroup = buildHull(cfgHull);
+  const extResult = buildExteriorDetails(cfgHull, feats);
+  extDetails = extResult.group;
+  doorHinge = extResult.door;
+  screenDoorHinge = extResult.screenDoor;
+  interiorGroup = buildInterior(cfgHull, feats);
+  drawerLU = interiorGroup.userData.drawerLU;
+  drawerLL = interiorGroup.userData.drawerLL;
+  drawerRU = interiorGroup.userData.drawerRU;
+  drawerRL = interiorGroup.userData.drawerRL;
+  showerDoorRef = interiorGroup.userData.showerDoor;
+  tankDoorA = interiorGroup.userData.tankDoorA;
+  tankDoorB = interiorGroup.userData.tankDoorB;
+  tankDrawersA = interiorGroup.userData.tankDrawersA;
+  tankDrawersB = interiorGroup.userData.tankDrawersB;
+  camperOrigin.add(hullGroup, extDetails, interiorGroup);
+  // kept outside extDetails so both doors stay usable in both views
+  if(doorHinge) camperOrigin.add(doorHinge);
+  if(screenDoorHinge) camperOrigin.add(screenDoorHinge);
+
+  chassisGroup = buildChassis(CFG);
+  groundGroup = buildGround(CFG);
+  root.add(groundGroup, chassisGroup);
+
+  applyViewMode();
+  applyToggle('chassis', state.chassis);
+  applyToggle('labels', state.labels);
+  applyToggle('grid', state.grid);
+
+  if(typeof refreshEditorList === 'function') refreshEditorList();
+}
+
+const state = { view:'ext', chassis:true, labels:true, grid:true, version:'v3' };
+
+function updateLabelVisibility(){
+  const show = state.labels && state.view==='cut';
+  interiorGroup.children.forEach(c=>{ if(c.userData.isLabel) c.visible = show; });
+}
+function applyViewMode(){
+  // interior is always rendered now — in Exterior view the opaque walls hide it
+  // except through the open doorway; in Cutaway the walls turn transparent too.
+  interiorGroup.visible = true;
+  const isCut = state.view==='cut';
+  hullGroup.traverse(c=>{
+    if(!c.isMesh) return;
+    const role = c.userData.hullRole;
+    if(role==='wall') c.material = isCut ? matWallBlueTrans : matWallBlue;
+    else if(role==='roof') c.material = isCut ? matRoofWhiteTrans : matRoofWhite;
+    else c.material = isCut ? matBodyTrans : matBody; // floor/ramp
+  });
+  extDetails.visible = (state.view==='ext');
+  updateLabelVisibility(); // labels use depthTest:false so they'd show through opaque walls otherwise
+}
+function applyToggle(name, val){
+  if(name==='chassis') chassisGroup.visible = val;
+  if(name==='grid') groundGroup.children[0].visible = val;
+  if(name==='labels'){ state.labels = val; updateLabelVisibility(); }
+}
+
+rebuild('v3');
+
+/* ============================================================
+   UI WIRING
+   ============================================================ */
+function wire(id, cb){ document.getElementById(id).addEventListener('click', cb); }
+document.querySelectorAll('[data-version]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('[data-version]').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    state.version = btn.dataset.version;
+    rebuild(state.version);
+  });
+});
+wire('btnExterior', ()=>{ state.view='ext'; applyViewMode(); document.getElementById('btnExterior').classList.add('active'); document.getElementById('btnCutaway').classList.remove('active'); });
+wire('btnCutaway', ()=>{ state.view='cut'; applyViewMode(); document.getElementById('btnCutaway').classList.add('active'); document.getElementById('btnExterior').classList.remove('active'); });
+wire('btnChassis', (e)=>{ state.chassis=!state.chassis; applyToggle('chassis',state.chassis); e.target.closest('.btn').classList.toggle('active',state.chassis); });
+wire('btnLabels', (e)=>{ state.labels=!state.labels; applyToggle('labels',state.labels); e.target.closest('.btn').classList.toggle('active',state.labels); });
+wire('btnGrid', (e)=>{ state.grid=!state.grid; applyToggle('grid',state.grid); e.target.closest('.btn').classList.toggle('active',state.grid); });
+wire('btnSpin', (e)=>{ autoRotate=!autoRotate; e.target.closest('.btn').classList.toggle('active',autoRotate); });
+
+/* ============================================================
+   DOOR OPEN/CLOSE
+   ============================================================ */
+function setPanelPct(hingeGetter, pct, sliderId, labelId){
+  pct = Math.min(100, Math.max(0, pct));
+  const slider = document.getElementById(sliderId);
+  slider.value = pct;
+  document.getElementById(labelId).textContent = pct===0 ? 'Closed' : (pct===100 ? 'Open' : pct+'%');
+  const target = hingeGetter();
+  if(!target) return;
+  const items = Array.isArray(target) ? target : [target];
+  items.forEach(obj=>{
+    if(obj.userData.slideOpenDist !== undefined){
+      // bench drawer: slides toward -Z (out into the camper's interior)
+      obj.position.z = obj.userData.closedZ - obj.userData.slideOpenDist*(pct/100);
+    } else if(obj.userData.openOffset){
+      // generic sliding drawer: closedPos + openOffset * pct
+      const c = obj.userData.closedPos, o = obj.userData.openOffset, t = pct/100;
+      obj.position.set(c.x + o.x*t, c.y + o.y*t, c.z + o.z*t);
+    } else {
+      // hinge: swings from its closed yaw (default 0) by doorOpenRad
+      obj.rotation.y = (obj.userData.doorClosedRad || 0) + (obj.userData.doorOpenRad || Math.PI*0.6) * (pct/100);
+    }
+  });
+}
+function setDoorPct(pct){ setPanelPct(()=>doorHinge, pct, 'doorSlider', 'doorPctLabel'); }
+function setScreenPct(pct){ setPanelPct(()=>screenDoorHinge, pct, 'screenSlider', 'screenPctLabel'); }
+function setStorageLUPct(pct){ setPanelPct(()=>drawerLU, pct, 'storageLUSlider', 'storageLUPctLabel'); }
+function setStorageLLPct(pct){ setPanelPct(()=>drawerLL, pct, 'storageLLSlider', 'storageLLPctLabel'); }
+function setStorageRUPct(pct){ setPanelPct(()=>drawerRU, pct, 'storageRUSlider', 'storageRUPctLabel'); }
+function setStorageRLPct(pct){ setPanelPct(()=>drawerRL, pct, 'storageRLSlider', 'storageRLPctLabel'); }
+function setShowerDoorPct(pct){ setPanelPct(()=>showerDoorRef, pct, 'showerDoorSlider', 'showerDoorPctLabel'); }
+function setTankAPct(pct){ setPanelPct(()=>tankDoorA, pct, 'tankASlider', 'tankAPctLabel'); }
+function setTankBPct(pct){ setPanelPct(()=>tankDoorB, pct, 'tankBSlider', 'tankBPctLabel'); }
+function setTankDrwAPct(pct){ setPanelPct(()=>tankDrawersA, pct, 'tankDrwASlider', 'tankDrwAPctLabel'); }
+function setTankDrwBPct(pct){ setPanelPct(()=>tankDrawersB, pct, 'tankDrwBSlider', 'tankDrwBPctLabel'); }
+
+document.getElementById('doorSlider').addEventListener('input', e=> setDoorPct(parseFloat(e.target.value)));
+document.getElementById('screenSlider').addEventListener('input', e=> setScreenPct(parseFloat(e.target.value)));
+wire('doorStepUp', ()=> setDoorPct(parseFloat(document.getElementById('doorSlider').value)+2));
+wire('doorStepDown', ()=> setDoorPct(parseFloat(document.getElementById('doorSlider').value)-2));
+wire('screenStepUp', ()=> setScreenPct(parseFloat(document.getElementById('screenSlider').value)+2));
+wire('screenStepDown', ()=> setScreenPct(parseFloat(document.getElementById('screenSlider').value)-2));
+wire('btnDoorOpen', ()=>{ setDoorPct(100); setScreenPct(100); });
+wire('btnDoorClose', ()=>{ setDoorPct(0); setScreenPct(0); });
+[['storageLU',setStorageLUPct],['storageLL',setStorageLLPct],['storageRU',setStorageRUPct],['storageRL',setStorageRLPct],
+ ['showerDoor',setShowerDoorPct],['tankA',setTankAPct],['tankB',setTankBPct],
+ ['tankDrwA',setTankDrwAPct],['tankDrwB',setTankDrwBPct]].forEach(([id,fn])=>{
+  document.getElementById(id+'Slider').addEventListener('input', e=> fn(parseFloat(e.target.value)));
+  wire(id+'StepUp',   ()=> fn(parseFloat(document.getElementById(id+'Slider').value)+2));
+  wire(id+'StepDown', ()=> fn(parseFloat(document.getElementById(id+'Slider').value)-2));
+});
+// collapsible control tabs — click a header to expand/collapse its controls
+document.querySelectorAll('.acc-head').forEach(h=>{
+  h.addEventListener('click', ()=> h.parentElement.classList.toggle('open'));
+});
+wire('btnStorageOpen', ()=>{ setStorageLUPct(100); setStorageLLPct(100); setStorageRUPct(100); setStorageRLPct(100); });
+wire('btnStorageClose', ()=>{ setStorageLUPct(0); setStorageLLPct(0); setStorageRUPct(0); setStorageRLPct(0); });
+
+/* ============================================================
+   PART EDITOR
+   ============================================================ */
+function getEditable(id){ return editables.find(r=>r.id===id); }
+
+function sliderRow(container, label, min, max, step, value, unit, onInput){
+  const row = document.createElement('div'); row.className='slider-row';
+  const lab = document.createElement('label');
+  const nameSpan = document.createElement('span'); nameSpan.textContent = label;
+  const valSpan = document.createElement('b'); valSpan.textContent = Math.round(value)+unit;
+  lab.appendChild(nameSpan); lab.appendChild(valSpan);
+
+  const controlRow = document.createElement('div'); controlRow.className='slider-controlrow';
+  const input = document.createElement('input');
+  input.type='range'; input.min=min; input.max=max; input.step=step; input.value=value;
+
+  function commit(v){
+    v = Math.min(max, Math.max(min, v));
+    input.value = v;
+    valSpan.textContent = Math.round(v)+unit;
+    onInput(v);
+  }
+  input.addEventListener('input', ()=> commit(parseFloat(input.value)));
+
+  const stepper = document.createElement('div'); stepper.className='stepper';
+  const upBtn = document.createElement('button'); upBtn.type='button'; upBtn.textContent='▲'; upBtn.title='+'+step+unit;
+  const downBtn = document.createElement('button'); downBtn.type='button'; downBtn.textContent='▼'; downBtn.title='-'+step+unit;
+  upBtn.addEventListener('click', ()=> commit(parseFloat(input.value)+parseFloat(step)));
+  downBtn.addEventListener('click', ()=> commit(parseFloat(input.value)-parseFloat(step)));
+  stepper.appendChild(upBtn); stepper.appendChild(downBtn);
+
+  controlRow.appendChild(input); controlRow.appendChild(stepper);
+  row.appendChild(lab); row.appendChild(controlRow);
+  container.appendChild(row);
+}
+
+function showEditorControls(id){
+  const rec = getEditable(id);
+  const container = document.getElementById('editorControls');
+  container.innerHTML = '';
+  if(!rec) return;
+  const obj = rec.obj;
+  const R2D = THREE.MathUtils.radToDeg, D2R = THREE.MathUtils.degToRad;
+
+  const t1 = document.createElement('div'); t1.className='editor-group-title'; t1.textContent='Position (mm)';
+  container.appendChild(t1);
+  sliderRow(container, 'Fore / Aft', (rec.basePos.x-1.5)*1000, (rec.basePos.x+1.5)*1000, 5, obj.position.x*1000, 'mm', v=>{ obj.position.x = v/1000; });
+  sliderRow(container, 'Left / Right', (rec.basePos.z-1.2)*1000, (rec.basePos.z+1.2)*1000, 5, obj.position.z*1000, 'mm', v=>{ obj.position.z = v/1000; });
+  sliderRow(container, 'Up / Down', (rec.basePos.y-0.8)*1000, (rec.basePos.y+0.8)*1000, 5, obj.position.y*1000, 'mm', v=>{ obj.position.y = v/1000; });
+
+  const t2 = document.createElement('div'); t2.className='editor-group-title'; t2.textContent='Size (mm)';
+  container.appendChild(t2);
+  sliderRow(container, 'Length (X)', rec.baseSize.x*200, rec.baseSize.x*2500, 5, obj.scale.x*rec.baseSize.x*1000, 'mm', v=>{ obj.scale.x = (v/1000)/rec.baseSize.x; });
+  sliderRow(container, 'Height (Y)', rec.baseSize.y*200, rec.baseSize.y*2500, 5, obj.scale.y*rec.baseSize.y*1000, 'mm', v=>{ obj.scale.y = (v/1000)/rec.baseSize.y; });
+  sliderRow(container, 'Width (Z)', rec.baseSize.z*200, rec.baseSize.z*2500, 5, obj.scale.z*rec.baseSize.z*1000, 'mm', v=>{ obj.scale.z = (v/1000)/rec.baseSize.z; });
+
+  const t3 = document.createElement('div'); t3.className='editor-group-title'; t3.textContent='Direction (°)';
+  container.appendChild(t3);
+  sliderRow(container, 'Turn (yaw)', -180, 180, 1, R2D(obj.rotation.y), '°', v=>{ obj.rotation.y = D2R(v); });
+  sliderRow(container, 'Tilt (pitch)', -45, 45, 1, R2D(obj.rotation.x), '°', v=>{ obj.rotation.x = D2R(v); });
+  sliderRow(container, 'Roll', -45, 45, 1, R2D(obj.rotation.z), '°', v=>{ obj.rotation.z = D2R(v); });
+}
+
+function refreshEditorList(){
+  const sel = document.getElementById('editorSelect');
+  if(!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = '';
+  if(editables.length===0){
+    const opt = document.createElement('option'); opt.value=''; opt.textContent='No editable parts in this view';
+    sel.appendChild(opt);
+    document.getElementById('editorControls').innerHTML = '';
+    return;
+  }
+  editables.forEach(rec=>{
+    const opt = document.createElement('option'); opt.value=rec.id; opt.textContent=rec.label;
+    sel.appendChild(opt);
+  });
+  sel.value = editables.find(r=>r.id===prev) ? prev : editables[0].id;
+  showEditorControls(sel.value);
+}
+document.getElementById('editorSelect').addEventListener('change', e=>showEditorControls(e.target.value));
+wire('btnResetOne', ()=>{
+  const rec = getEditable(document.getElementById('editorSelect').value);
+  if(rec){ resetEditable(rec); showEditorControls(rec.id); }
+});
+wire('btnResetAll', ()=>{
+  editables.forEach(resetEditable);
+  showEditorControls(document.getElementById('editorSelect').value);
+});
+wire('btnEditor', (e)=>{
+  const panel = document.getElementById('editorPanel');
+  const willOpen = !panel.classList.contains('open');
+  panel.classList.toggle('open', willOpen);
+  e.target.closest('.btn').classList.toggle('active', willOpen);
+  if(willOpen) refreshEditorList();
+});
+
+window.addEventListener('resize', ()=>{
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+window.addEventListener('keydown', e=>{
+  if(e.key==='1'){ document.getElementById('btnExterior').click(); }
+  if(e.key==='2'){ document.getElementById('btnCutaway').click(); }
+  if(e.key==='e' || e.key==='E'){ document.getElementById('btnEditor').click(); }
+});
+
+function animate(){
+  requestAnimationFrame(animate);
+  if(autoRotate) theta += 0.0028;
+  syncHatchFromEditable(); // keeps the real wall opening in step with the "Hatch to cab" editable
+  updateCamera();
+  renderer.render(scene, camera);
+}
+document.getElementById('loading').style.display='none';
+animate();
+
+})();
+</script>
+</body>
+</html>
